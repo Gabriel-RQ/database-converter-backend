@@ -2,6 +2,7 @@ package com.gabrielrq.database_converter.domain;
 
 public record ColumnDefinition(
         String name,
+        Integer genericType,
         String originType,
         String targetType,
         Integer length,
