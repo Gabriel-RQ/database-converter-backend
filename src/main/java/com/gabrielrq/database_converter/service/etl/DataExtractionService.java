@@ -10,14 +10,10 @@ import com.gabrielrq.database_converter.dto.DbConnectionConfigDTO;
 import com.gabrielrq.database_converter.service.DatabaseConnectionService;
 import com.gabrielrq.database_converter.service.JsonService;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -35,16 +31,16 @@ public class DataExtractionService {
         this.jsonService = jsonService;
     }
 
-    private void storeToJSON(JdbcTemplate template, DatabaseDefinition metadata) {
+    private void storeToJSON(DbConnectionConfigDTO config, DatabaseDefinition metadata) {
         Path outputPath = Path.of(metadata.name());
-        jsonService.write(metadata, outputPath.resolve("db.meta").normalize().toString());
+        jsonService.write(metadata, outputPath.resolve("db.meta").toString());
 
         int availableProcessors = Runtime.getRuntime().availableProcessors();
         int poolSize = threadPoolSize > 0 ? threadPoolSize : Math.max(1, availableProcessors * 2);
 
         try (ExecutorService executor = Executors.newFixedThreadPool(poolSize)) {
             List<Future<?>> futures = new ArrayList<>();
-
+            Map<String, Throwable> failedTables = new ConcurrentHashMap<>();
             for (TableDefinition table : metadata.tables()) {
                 futures.add(
                         executor.submit(() -> {
@@ -55,11 +51,18 @@ public class DataExtractionService {
                                     ? schema + "." + tableName
                                     : tableName;
 
+
                             String sql = "SELECT * FROM " + fullTableName;
-
-                            List<Map<String, Object>> rows = template.queryForList(sql);
-                            jsonService.write(rows, outputPath.resolve(fullTableName).normalize().toString());
-
+                            try (
+                                    Connection connection = databaseConnectionService.createConnection(config);
+                                    Statement stmt = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+                            ) {
+                                stmt.setFetchSize(1000);
+                                ResultSet rs = stmt.executeQuery(sql);
+                                jsonService.writeStreamGz(rs, outputPath.resolve(fullTableName).toString());
+                            } catch (SQLException e) {
+                                failedTables.put(tableName, e);
+                            }
                         })
                 );
             }
@@ -73,6 +76,10 @@ public class DataExtractionService {
 
             for (var future : futures) {
                 future.get();
+            }
+
+            if (!failedTables.isEmpty()) {
+                throw new RuntimeException("A table failed to be saved"); // lançar excessão personalizada a ser tratada pela aplicação
             }
 
         } catch (InterruptedException | ExecutionException e) {
@@ -179,7 +186,7 @@ public class DataExtractionService {
     public DatabaseDefinition extract(DbConnectionConfigDTO config) {
         try (Connection connection = databaseConnectionService.createConnection(config)) {
             var metadata = parseMetadata(config.name(), connection);
-            storeToJSON(databaseConnectionService.createJdbcTemplate(config), metadata);
+            storeToJSON(config, metadata);
             return metadata;
         } catch (SQLException e) {
             throw new RuntimeException(e); // lançar excessão customizada que será tratada pela aplicação

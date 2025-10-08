@@ -1,15 +1,22 @@
 package com.gabrielrq.database_converter.service;
 
 
+import com.fasterxml.jackson.core.JsonEncoding;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.util.zip.GZIPOutputStream;
 
 @Service
 public class JsonService {
@@ -25,8 +32,8 @@ public class JsonService {
 
     public void write(Object object, String filename) {
         Path outputDir = Path.of(path);
+        Path outputFile = outputDir.resolve(filename + ".json");
         try {
-            Path outputFile = outputDir.resolve(filename + ".json");
             Files.createDirectories(outputFile.getParent());
             if (Files.exists(outputFile)) {
                 Files.delete(outputFile);
@@ -36,4 +43,36 @@ public class JsonService {
             throw new RuntimeException(e); // lançar excessão personalizada a ser tratada pela aplicação
         }
     }
+
+        public void writeStreamGz(ResultSet rs, String filename) {
+            Path outputDir = Path.of(path);
+            Path outputFile = outputDir.resolve(filename + ".json.gz");
+
+            try (
+                    FileOutputStream fos = new FileOutputStream(outputFile.toFile());
+                    GZIPOutputStream os = new GZIPOutputStream(fos);
+                    JsonGenerator generator = mapper.getFactory().createGenerator(os, JsonEncoding.UTF8);
+            ) {
+                generator.writeStartArray();
+
+                ResultSetMetaData metadata = rs.getMetaData();
+                int columns = metadata.getColumnCount();
+                while (rs.next()) {
+                    generator.writeStartObject();
+
+                    for (int i = 1; i <= columns; i++) {
+                        String columnName = metadata.getColumnName(i);
+                        Object value = rs.getObject(i);
+                        generator.writeObjectField(columnName, value);
+                    }
+
+                    generator.writeEndObject();
+                }
+
+                generator.writeEndArray();
+                generator.flush();
+            } catch (IOException | SQLException e) {
+                throw new RuntimeException(e); // lançar excessão personalizada a ser tratada pela aplicação
+            }
+        }
 }
