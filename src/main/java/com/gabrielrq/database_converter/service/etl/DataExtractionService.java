@@ -8,26 +8,76 @@ import com.gabrielrq.database_converter.domain.DatabaseDefinition;
 import com.gabrielrq.database_converter.domain.TableDefinition;
 import com.gabrielrq.database_converter.dto.DbConnectionConfigDTO;
 import com.gabrielrq.database_converter.service.DatabaseConnectionService;
+import com.gabrielrq.database_converter.service.JsonService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.*;
 
 @Service
 public class DataExtractionService {
 
-    private final DatabaseConnectionService databaseConnectionService;
+    @Value("${migration.extract.threads:0}")
+    private int threadPoolSize;
 
-    public DataExtractionService(DatabaseConnectionService databaseConnectionService) {
+    private final DatabaseConnectionService databaseConnectionService;
+    private final JsonService jsonService;
+
+    public DataExtractionService(DatabaseConnectionService databaseConnectionService, JsonService jsonService) {
         this.databaseConnectionService = databaseConnectionService;
+        this.jsonService = jsonService;
     }
 
     private void storeToJSON(JdbcTemplate template, DatabaseDefinition metadata) {
+        Path outputPath = Path.of(metadata.name());
+        jsonService.write(metadata, outputPath.resolve("db.meta").normalize().toString());
 
+        int availableProcessors = Runtime.getRuntime().availableProcessors();
+        int poolSize = threadPoolSize > 0 ? threadPoolSize : Math.max(1, availableProcessors * 2);
+
+        try (ExecutorService executor = Executors.newFixedThreadPool(poolSize)) {
+            List<Future<?>> futures = new ArrayList<>();
+
+            for (TableDefinition table : metadata.tables()) {
+                futures.add(
+                        executor.submit(() -> {
+                            String schema = table.schema();
+                            String tableName = table.name();
+
+                            String fullTableName = (schema != null && !schema.isBlank())
+                                    ? schema + "." + tableName
+                                    : tableName;
+
+                            String sql = "SELECT * FROM " + fullTableName;
+
+                            List<Map<String, Object>> rows = template.queryForList(sql);
+                            jsonService.write(rows, outputPath.resolve(fullTableName).normalize().toString());
+
+                        })
+                );
+            }
+
+            executor.shutdown();
+            boolean isTerminated = executor.awaitTermination(30, TimeUnit.MINUTES);
+
+            if (!isTerminated) {
+                throw new RuntimeException("Executor did not terminate successfully"); // lançar excessão personalizada a ser tratada pela aplicação
+            }
+
+            for (var future : futures) {
+                future.get();
+            }
+
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e); // lançar excessão personalizada a ser tratada pela aplicação
+        }
     }
 
 
@@ -46,7 +96,7 @@ public class DataExtractionService {
 
                 TableDefinitionBuilder table = new TableDefinitionBuilder()
                         .setName(tableName)
-                        .setSchema(tableRs.getString("TABLE_SCHEMA"));
+                        .setSchema(tableRs.getString("TABLE_SCHEM"));
 
 
                 // Primary Keys
@@ -133,7 +183,7 @@ public class DataExtractionService {
             storeToJSON(databaseConnectionService.createJdbcTemplate(config), metadata);
             return metadata;
         } catch (SQLException e) {
-            throw new RuntimeException(); // lançar excessão customizada que será tratada pela aplicação
+            throw new RuntimeException(e); // lançar excessão customizada que será tratada pela aplicação
         }
     }
 
