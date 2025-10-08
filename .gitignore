@@ -5,7 +5,7 @@ target/
 !**/src/test/**/target/
 
 ### Application ###
-conversion/
+migration/
 
 ### STS ###
 .apt_generated
