@@ -14,7 +14,7 @@ import java.nio.file.Path;
 @Service
 public class JsonService {
 
-    @Value("${json.path}")
+    @Value("${migration.json.path}")
     private String path;
 
     private final ObjectMapper mapper = new ObjectMapper();
