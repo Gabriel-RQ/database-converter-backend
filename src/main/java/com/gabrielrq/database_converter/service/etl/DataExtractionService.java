@@ -37,7 +37,7 @@ public class DataExtractionService {
 
     private void storeToJSON(DbConnectionConfigDTO config, DatabaseDefinition metadata) {
         Path outputPath = Path.of(metadata.name());
-        jsonService.write(metadata, outputPath.resolve("db.meta").toString());
+        jsonService.write(metadata, outputPath.resolve("origin.meta").toString());
 
         int availableProcessors = Runtime.getRuntime().availableProcessors();
         int poolSize = threadPoolSize > 0 ? threadPoolSize : Math.max(1, availableProcessors * 2);
