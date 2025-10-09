@@ -48,36 +48,38 @@ public class JsonService {
         Path outputDir = Path.of(path);
         Path outputFile = outputDir.resolve(filename + ".json");
 
-        try (
-                FileOutputStream fos = new FileOutputStream(outputFile.toFile());
-                BufferedOutputStream bos = new BufferedOutputStream(fos);
-                JsonGenerator generator = mapper.getFactory().createGenerator(bos, JsonEncoding.UTF8);
-        ) {
+        try {
             Files.createDirectories(outputFile.getParent());
-            generator.writeStartArray();
+            try (
+                    FileOutputStream fos = new FileOutputStream(outputFile.toFile());
+                    BufferedOutputStream bos = new BufferedOutputStream(fos);
+                    JsonGenerator generator = mapper.getFactory().createGenerator(bos, JsonEncoding.UTF8);
+            ) {
+                generator.writeStartArray();
 
-            ResultSetMetaData metadata = rs.getMetaData();
-            int columns = metadata.getColumnCount();
-            String[] columnNames = new String[columns];
-
-            for (int i = 1; i <= columns; i++) {
-                columnNames[i - 1] = metadata.getColumnName(i);
-            }
-
-            while (rs.next()) {
-                generator.writeStartObject();
+                ResultSetMetaData metadata = rs.getMetaData();
+                int columns = metadata.getColumnCount();
+                String[] columnNames = new String[columns];
 
                 for (int i = 1; i <= columns; i++) {
-                    String columnName = columnNames[i - 1];
-                    Object value = rs.getObject(i);
-                    generator.writeObjectField(columnName, value);
+                    columnNames[i - 1] = metadata.getColumnName(i);
                 }
 
-                generator.writeEndObject();
-            }
+                while (rs.next()) {
+                    generator.writeStartObject();
 
-            generator.writeEndArray();
-            generator.flush();
+                    for (int i = 1; i <= columns; i++) {
+                        String columnName = columnNames[i - 1];
+                        Object value = rs.getObject(i);
+                        generator.writeObjectField(columnName, value);
+                    }
+
+                    generator.writeEndObject();
+                }
+
+                generator.writeEndArray();
+                generator.flush();
+            }
         } catch (IOException | SQLException e) {
             throw new RuntimeException(e); // lançar excessão personalizada a ser tratada pela aplicação
         }
