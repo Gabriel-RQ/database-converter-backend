@@ -68,7 +68,7 @@ public class DataExtractionService {
                             ) {
                                 stmt.setFetchSize(fetchSize);
                                 ResultSet rs = stmt.executeQuery(sql);
-                                jsonService.writeStream(rs, outputPath.resolve(fullTableName).toString());
+                                jsonService.writeStream(rs, outputPath.resolve("tables/" + fullTableName).toString());
                             } catch (SQLException e) {
                                 failedTables.put(tableName, e);
                             } finally {
