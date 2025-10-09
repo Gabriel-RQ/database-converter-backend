@@ -3,6 +3,7 @@ package com.gabrielrq.database_converter.service;
 
 import com.fasterxml.jackson.core.JsonEncoding;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,17 +13,21 @@ import org.springframework.stereotype.Service;
 import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.Map;
 
 @Service
 public class JsonService {
 
     @Value("${migration.json.path}")
     private String path;
+    @Value("${migration.transform.maps.path}")
+    private String conversionMapsPath;
 
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -82,6 +87,15 @@ public class JsonService {
             }
         } catch (IOException | SQLException e) {
             throw new RuntimeException(e); // lançar excessão personalizada a ser tratada pela aplicação
+        }
+    }
+
+    public Map<Integer, String> readConversionMap(String mapName) throws IOException {
+        Path mapPath = Path.of(conversionMapsPath).resolve(mapName + ".json");
+
+        try (InputStream stream = JsonService.class.getClassLoader().getResourceAsStream(mapPath.toString())) {
+            return mapper.readValue(stream, new TypeReference<Map<Integer, String>>() {
+            });
         }
     }
 }
