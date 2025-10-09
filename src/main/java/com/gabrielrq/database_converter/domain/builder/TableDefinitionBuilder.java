@@ -65,6 +65,16 @@ public class TableDefinitionBuilder {
         return this;
     }
 
+    public static TableDefinitionBuilder from(TableDefinition table) {
+        return new TableDefinitionBuilder()
+                .setName(table.name())
+                .setColumns(table.columns())
+                .setSchema(table.schema())
+                .setForeignKeys(table.foreignKeys())
+                .setUniqueConstraints(table.uniqueConstraints())
+                .setPrimaryKeyColumns(table.primaryKeyColumns());
+    }
+
     public TableDefinition build() {
         return new TableDefinition(
                 name,
