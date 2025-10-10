@@ -70,7 +70,9 @@ public class SqlService {
                     .append(columns)
                     .append(") VALUES\n");
 
-            generateDMLData(table, tablesPath, dmlBuilder);
+            if (!generateDMLData(table, tablesPath, dmlBuilder)) {
+                continue;
+            }
 
             dmlBuilder.append(";");
             write(outDir.resolve(table.schema() + "." + table.name() + ".sql"), dmlBuilder.toString());
@@ -101,10 +103,11 @@ public class SqlService {
         }
     }
 
-    private void generateDMLData(TableDefinition table, Path tablesPath, StringBuilder dmlBuilder) {
+    private boolean generateDMLData(TableDefinition table, Path tablesPath, StringBuilder dmlBuilder) {
         List<String> dataDefinition = new ArrayList<>();
         try {
             List<Map<String, Object>> tableData = jsonService.readTableData(tablesPath.resolve(table.schema() + "." + table.name() + ".json"));
+            if (tableData.isEmpty()) return false;
             for (var data : tableData) {
                 String dataBuilder = "(" + data.values().stream().map(this::formatDMLValue).collect(Collectors.joining(",")) + ")";
                 dataDefinition.add("\t" + dataBuilder);
@@ -113,6 +116,7 @@ public class SqlService {
             throw new RuntimeException(e); // lançar excessão personalizada a ser tratada pela aplicação
         }
         dmlBuilder.append(String.join(",\n", dataDefinition));
+        return true;
     }
 
     private String formatDMLValue(Object value) {
