@@ -34,6 +34,9 @@ public class SqlService {
     }
 
     public void generateDDL(DatabaseDefinition metadata) {
+        // TODO melhorar definição das colunas (quanto aos tipos)
+        // TODO garantir ordem de criação das tabelas considerando dependências (com uma árvore de dependências talvez?)
+
         Path outDir = Path.of(basePath).resolve(metadata.name()).resolve(ddlPath);
 
         for (var table : metadata.tables()) {
@@ -64,9 +67,38 @@ public class SqlService {
                     .append(String.join(",\n", columnDefinitions));
 
             if (!table.primaryKeyColumns().isEmpty()) {
-                ddlBuilder.append(",\n\t");
-                ddlBuilder.append("PRIMARY KEY (").append(String.join(",", table.primaryKeyColumns())).append(")");
+                ddlBuilder
+                        .append(",\n\t")
+                        .append("PRIMARY KEY (").append(String.join(",", table.primaryKeyColumns())).append(")");
             }
+
+            List<String> fkDefinitions = new ArrayList<>();
+            if (!table.foreignKeys().isEmpty()) {
+                ddlBuilder.append(",\n");
+
+                for (var fk : table.foreignKeys()) {
+                    String fkDef = "FOREIGN KEY (" +
+                            String.join(",", fk.localColumns()) +
+                            ") REFERENCES " +
+                            fk.referencedTable() +
+                            " (" +
+                            String.join(",", fk.referencedColumns()) +
+                            ")";
+                    fkDefinitions.add("\t" + fkDef);
+                }
+            }
+            ddlBuilder.append(String.join(",\n", fkDefinitions));
+
+
+            List<String> uniqueDefinitions = new ArrayList<>();
+            if (!table.uniqueConstraints().isEmpty()) {
+                ddlBuilder.append(",\n");
+                for (var unique : table.uniqueConstraints()) {
+                    String uniqueDef = "UNIQUE " + "(" + String.join(",", unique) + ")";
+                    uniqueDefinitions.add("\t" + uniqueDef);
+                }
+            }
+            ddlBuilder.append(String.join(",\n", uniqueDefinitions));
 
             ddlBuilder.append("\n);");
             write(outDir.resolve(table.schema() + "." + table.name() + ".sql"), ddlBuilder.toString());
