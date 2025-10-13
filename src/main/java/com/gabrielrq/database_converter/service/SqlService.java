@@ -76,23 +76,13 @@ public class SqlService {
         Path tablesPath = Path.of(basePath).resolve(metadata.name()).resolve("tables");
 
         for (var table : metadata.tables()) {
-            StringBuilder dmlBuilder = new StringBuilder()
-                    .append("INSERT INTO ")
-                    .append(table.schema())
-                    .append(".")
-                    .append(table.name())
-                    .append(" (");
-
+            StringBuilder dmlBuilder = new StringBuilder();
             String columns = String.join(",", table.columns().stream().map(ColumnDefinition::name).toList());
-            dmlBuilder
-                    .append(columns)
-                    .append(") VALUES\n");
 
-            if (!generateDMLData(table, tablesPath, dmlBuilder)) {
+            if (!generateDMLData(table, tablesPath, dmlBuilder, columns)) {
                 continue;
             }
 
-            dmlBuilder.append(";");
             write(outDir.resolve(table.schema() + "." + table.name() + ".sql"), dmlBuilder.toString());
         }
     }
@@ -120,21 +110,29 @@ public class SqlService {
         }
     }
 
-    private boolean generateDMLData(TableDefinition table, Path tablesPath, StringBuilder dmlBuilder) {
-        List<String> dataDefinition = new ArrayList<>();
+    private boolean generateDMLData(TableDefinition table, Path tablesPath, StringBuilder dmlBuilder, String columns) {
         try {
             List<Map<String, Object>> tableData = jsonService.readTableData(tablesPath.resolve(table.schema() + "." + table.name() + ".json"));
             if (tableData.isEmpty()) return false;
+
             for (var data : tableData) {
-                String dataBuilder = "(" + data.values().stream().map(this::formatDMLValue).collect(Collectors.joining(",")) + ")";
-                dataDefinition.add("\t" + dataBuilder);
+                dmlBuilder.append("INSERT INTO ")
+                        .append(table.schema())
+                        .append(".")
+                        .append(table.name())
+                        .append(" (")
+                        .append(columns)
+                        .append(") VALUES ")
+                        .append("(")
+                        .append(data.values().stream().map(this::formatDMLValue).collect(Collectors.joining(",")))
+                        .append(");")
+                        .append(System.lineSeparator());
             }
         } catch (FileNotFoundException e) {
             return false;
         } catch (IOException e) {
             throw new RuntimeException(e); // lançar excessão personalizada a ser tratada pela aplicação
         }
-        dmlBuilder.append(String.join(",\n", dataDefinition));
         return true;
     }
 
