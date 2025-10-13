@@ -13,9 +13,7 @@ import org.springframework.stereotype.Service;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.List;
 import java.util.Map;
 
@@ -52,7 +50,20 @@ public class JsonService {
         Path outputFile = outputDir.resolve(filename + ".json");
 
         try {
+            if (!rs.next()) {
+                return;
+            }
+
+            ResultSetMetaData metadata = rs.getMetaData();
+            int columns = metadata.getColumnCount();
+            String[] columnNames = new String[columns];
+
+            for (int i = 1; i <= columns; i++) {
+                columnNames[i - 1] = metadata.getColumnName(i);
+            }
+
             Files.createDirectories(outputFile.getParent());
+
             try (
                     FileOutputStream fos = new FileOutputStream(outputFile.toFile());
                     BufferedOutputStream bos = new BufferedOutputStream(fos);
@@ -60,25 +71,48 @@ public class JsonService {
             ) {
                 generator.writeStartArray();
 
-                ResultSetMetaData metadata = rs.getMetaData();
-                int columns = metadata.getColumnCount();
-                String[] columnNames = new String[columns];
-
-                for (int i = 1; i <= columns; i++) {
-                    columnNames[i - 1] = metadata.getColumnName(i);
-                }
-
-                while (rs.next()) {
+                do {
                     generator.writeStartObject();
 
                     for (int i = 1; i <= columns; i++) {
                         String columnName = columnNames[i - 1];
+                        int columnType = metadata.getColumnType(i);
                         Object value = rs.getObject(i);
-                        generator.writeObjectField(columnName, value);
+
+                        switch (columnType) {
+                            case Types.DATE -> {
+                                Date date = rs.getDate(i);
+                                generator.writeStringField(columnName, date != null ? date.toLocalDate().toString() : null);
+                            }
+                            case Types.TIMESTAMP, Types.TIMESTAMP_WITH_TIMEZONE -> {
+                                Timestamp ts = rs.getTimestamp(i);
+                                generator.writeStringField(columnName, ts != null ? ts.toInstant().toString() : null);
+                            }
+                            case Types.CLOB -> {
+                                Clob clob = rs.getClob(i);
+                                String clobValue = clob != null ? clob.getSubString(1L, (int) clob.length()) : null;
+                                generator.writeStringField(columnName, clobValue);
+                            }
+                            case Types.BLOB, Types.BINARY, Types.VARBINARY, Types.LONGVARBINARY -> {
+                                byte[] bytes = rs.getBytes(i);
+                                if (bytes != null) {
+                                    generator.writeBinaryField(columnName, bytes); // escreve como base64
+                                } else {
+                                    generator.writeNullField(columnName);
+                                }
+                            }
+                            default -> {
+                                if (value == null) {
+                                    generator.writeNullField(columnName);
+                                } else {
+                                    generator.writeObjectField(columnName, value);
+                                }
+                            }
+                        }
                     }
 
                     generator.writeEndObject();
-                }
+                } while (rs.next());
 
                 generator.writeEndArray();
                 generator.flush();
@@ -89,6 +123,10 @@ public class JsonService {
     }
 
     public List<Map<String, Object>> readTableData(Path tablePath) throws IOException {
+        if (!Files.exists(tablePath)) {
+            throw new FileNotFoundException("File '" + tablePath + "' not found");
+        }
+
         try (FileInputStream stream = new FileInputStream(tablePath.toString())) {
             return mapper.readValue(stream, new TypeReference<List<Map<String, Object>>>() {
             });
