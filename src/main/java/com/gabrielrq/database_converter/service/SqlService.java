@@ -81,7 +81,7 @@ public class SqlService {
 
     public void generateDDL(DatabaseDefinition metadata) {
         // TODO melhorar definição das colunas (quanto aos tipos)
-        // TODO garantir ordem de criação das tabelas considerando dependências (com uma árvore de dependências talvez?)
+        // TODO garantir ordem de criação das tabelas considerando dependências (com uma árvore de dependências talvez? grafo de dependências + topological sort?)
 
         Path outDir = Path.of(basePath).resolve(metadata.name()).resolve(ddlPath);
 
@@ -127,6 +127,24 @@ public class SqlService {
         } else {
             return "'" + value.toString().replace("'", "''") + "'";
         }
+    }
+
+    private String formatColumnType(ColumnDefinition column) {
+        String type = column.targetType();
+        return switch (column.genericType()) {
+            case Types.VARCHAR, Types.NVARCHAR, Types.LONGVARCHAR, Types.LONGNVARCHAR ->
+                    type + "(" + column.length() + ")";
+            case Types.NUMERIC, Types.DECIMAL ->
+                    type + "(" + column.precision() + "," + column.scale() + ")";
+            default -> type;
+        };
+    }
+
+    private boolean isStringType(ColumnDefinition column) {
+        return switch (column.genericType()) {
+            case Types.VARCHAR, Types.NVARCHAR, Types.LONGVARCHAR, Types.LONGNVARCHAR, Types.CHAR, Types.NCHAR -> true;
+            default -> false;
+        };
     }
 
     private void generateDDLUnique(TableDefinition table, StringBuilder ddlBuilder) {
@@ -175,14 +193,21 @@ public class SqlService {
             columnDef
                     .append(column.name())
                     .append(" ")
-                    .append(column.targetType());
-            switch (column.genericType()) {
-                case Types.VARCHAR, Types.NVARCHAR, Types.LONGVARCHAR, Types.LONGNVARCHAR ->
-                        columnDef.append("(").append(column.length()).append(")");
-                case Types.NUMERIC, Types.DECIMAL ->
-                        columnDef.append("(").append(column.precision()).append(",").append(column.scale()).append(")");
+                    .append(formatColumnType(column));
 
+            if (column.defaultValue() != null && !column.defaultValue().isBlank()) {
+                columnDef.append(" DEFAULT ");
+                if (isStringType(column)) {
+                    columnDef.append("'").append(column.defaultValue()).append("'");
+                } else {
+                    columnDef.append(column.defaultValue());
+                }
             }
+
+            if (!column.isNullable()) {
+                columnDef.append(" NOT NULL");
+            }
+
             columnDefinitions.add("\t" + columnDef);
         }
 
