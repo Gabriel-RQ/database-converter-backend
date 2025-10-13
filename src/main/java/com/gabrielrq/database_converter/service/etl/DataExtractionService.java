@@ -27,11 +27,9 @@ public class DataExtractionService {
     @Value("${migration.extract.fetchSize:0}")
     private int fetchSize;
 
-    private final DatabaseConnectionService databaseConnectionService;
     private final JsonService jsonService;
 
-    public DataExtractionService(DatabaseConnectionService databaseConnectionService, JsonService jsonService) {
-        this.databaseConnectionService = databaseConnectionService;
+    public DataExtractionService(JsonService jsonService) {
         this.jsonService = jsonService;
     }
 
@@ -63,7 +61,7 @@ public class DataExtractionService {
 
                             String sql = "SELECT * FROM " + fullTableName;
                             try (
-                                    Connection connection = databaseConnectionService.createConnection(config);
+                                    Connection connection = DatabaseConnectionService.createConnection(config);
                                     Statement stmt = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
                             ) {
                                 stmt.setFetchSize(fetchSize);
@@ -195,7 +193,7 @@ public class DataExtractionService {
     }
 
     public DatabaseDefinition extract(DbConnectionConfigDTO config) {
-        try (Connection connection = databaseConnectionService.createConnection(config)) {
+        try (Connection connection = DatabaseConnectionService.createConnection(config)) {
             var metadata = parseMetadata(config.name(), connection);
             storeToJSON(config, metadata);
             return metadata;

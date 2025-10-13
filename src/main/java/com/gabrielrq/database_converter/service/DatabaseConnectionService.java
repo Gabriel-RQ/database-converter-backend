@@ -12,7 +12,7 @@ import java.sql.SQLException;
 @Service
 public class DatabaseConnectionService {
 
-    public DataSource createDataSource(DbConnectionConfigDTO config) {
+    public static DataSource createDataSource(DbConnectionConfigDTO config) {
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
         dataSource.setUrl(config.jdbcUrl());
         dataSource.setUsername(config.username());
@@ -21,12 +21,12 @@ public class DatabaseConnectionService {
         return dataSource;
     }
 
-    public JdbcTemplate createJdbcTemplate(DbConnectionConfigDTO config) {
+    public static JdbcTemplate createJdbcTemplate(DbConnectionConfigDTO config) {
         DataSource dataSource = createDataSource(config);
         return new JdbcTemplate(dataSource);
     }
 
-    public Connection createConnection(DbConnectionConfigDTO config) throws SQLException {
+    public static Connection createConnection(DbConnectionConfigDTO config) throws SQLException {
         Connection connection = createDataSource(config).getConnection();
         connection.setAutoCommit(false);
         return connection;
