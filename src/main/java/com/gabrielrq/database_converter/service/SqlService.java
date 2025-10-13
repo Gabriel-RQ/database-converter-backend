@@ -6,9 +6,7 @@ import com.gabrielrq.database_converter.domain.TableDefinition;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Types;
@@ -45,6 +43,26 @@ public class SqlService {
             }
         } catch (IOException e) {
             throw new RuntimeException(e); // // lançar excessão personalizada a ser tratada pela aplicação
+        }
+    }
+
+    public String read(Path path) throws IOException {
+        Path p = Path.of(basePath).resolve(path);
+
+        if (!Files.exists(p)) {
+            throw new FileNotFoundException("File '" + p + "' not found");
+        }
+
+        try (
+                FileReader fos = new FileReader(p.toFile());
+                BufferedReader br = new BufferedReader(fos)
+        ) {
+            StringBuilder content = new StringBuilder();
+            String line;
+            while ((line = br.readLine()) != null) {
+                content.append(line).append(System.lineSeparator());
+            }
+            return content.toString();
         }
     }
 
@@ -111,6 +129,8 @@ public class SqlService {
                 String dataBuilder = "(" + data.values().stream().map(this::formatDMLValue).collect(Collectors.joining(",")) + ")";
                 dataDefinition.add("\t" + dataBuilder);
             }
+        } catch (FileNotFoundException e) {
+            return false;
         } catch (IOException e) {
             throw new RuntimeException(e); // lançar excessão personalizada a ser tratada pela aplicação
         }
@@ -131,10 +151,21 @@ public class SqlService {
     private String formatColumnType(ColumnDefinition column) {
         String type = column.targetType();
         return switch (column.genericType()) {
-            case Types.VARCHAR, Types.NVARCHAR, Types.LONGVARCHAR, Types.LONGNVARCHAR ->
-                    type + "(" + column.length() + ")";
-            case Types.NUMERIC, Types.DECIMAL ->
-                    type + "(" + column.precision() + "," + column.scale() + ")";
+            case Types.VARCHAR, Types.NVARCHAR, Types.LONGVARCHAR, Types.LONGNVARCHAR, Types.CHAR -> {
+                if ("TEXT".equalsIgnoreCase(column.originType()) || column.length() >= Integer.MAX_VALUE) {
+                    yield "TEXT";
+                }
+                if (column.length() > 0) {
+                    yield type + "(" + column.length() + ")";
+                }
+                yield type;
+            }
+            case Types.NUMERIC, Types.DECIMAL -> {
+                if (column.precision() > 0) {
+                    yield type + "(" + column.precision() + "," + column.scale() + ")";
+                }
+                yield type;
+            }
             default -> type;
         };
     }
@@ -194,14 +225,14 @@ public class SqlService {
                     .append(" ")
                     .append(formatColumnType(column));
 
-            if (column.defaultValue() != null && !column.defaultValue().isBlank()) {
-                columnDef.append(" DEFAULT ");
-                if (isStringType(column)) {
-                    columnDef.append("'").append(column.defaultValue()).append("'");
-                } else {
-                    columnDef.append(column.defaultValue());
-                }
-            }
+//            if (column.defaultValue() != null && !column.defaultValue().isBlank()) {
+//                columnDef.append(" DEFAULT ");
+//                if (isStringType(column)) {
+//                    columnDef.append("'").append(column.defaultValue()).append("'");
+//                } else {
+//                    columnDef.append(column.defaultValue());
+//                }
+//            }
 
             if (!column.isNullable()) {
                 columnDef.append(" NOT NULL");
