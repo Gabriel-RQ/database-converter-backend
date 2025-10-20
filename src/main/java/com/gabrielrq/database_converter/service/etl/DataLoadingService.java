@@ -11,6 +11,9 @@ import org.springframework.stereotype.Service;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
 
 @Service
@@ -25,9 +28,8 @@ public class DataLoadingService {
     public void load(DbConnectionConfigDTO config, TransformationResult transformationOutput) {
         Path basePath = Path.of(transformationOutput.metadata().name());
         JdbcTemplate template = DatabaseConnectionService.createJdbcTemplate(config);
-
         executeDDL(transformationOutput.executionList(), basePath, template);
-        executeDML(transformationOutput.executionList(), basePath, template);
+        executeDML(transformationOutput.executionList(), basePath, config);
     }
 
     private void executeDDL(List<TableDefinition> executionList, Path basePath, JdbcTemplate template) {
@@ -42,15 +44,21 @@ public class DataLoadingService {
         }
     }
 
-    private void executeDML(List<TableDefinition> executionList, Path basePath, JdbcTemplate template) {
-        for (var table : executionList) {
-            try {
-                String sql = sqlService.read(basePath.resolve("dml").resolve(table.schema() + "." + table.name() + ".sql"));
-                template.execute(sql);
-            } catch (FileNotFoundException ignored) {
-            } catch (IOException e) {
-                throw new RuntimeException(e); // lançar excessão customizada a ser tratada pela aplicação ou decidir ignorar
+    private void executeDML(List<TableDefinition> executionList, Path basePath, DbConnectionConfigDTO config) {
+        try (
+                Connection connection = DatabaseConnectionService.createConnection(config);
+                Statement stmt = connection.createStatement()
+        ) {
+            for (final var table : executionList) {
+                try {
+                    Path dmlPath = basePath.resolve("dml").resolve(table.schema() + "." + table.name() + ".sql");
+                    sqlService.bufferReadAndExec(dmlPath, stmt);
+                    connection.commit();
+                } catch (FileNotFoundException ignored) {
+                }
             }
+        } catch (IOException | SQLException e) {
+            throw new RuntimeException("Erro ao executar DML para tabela ", e);
         }
     }
 }

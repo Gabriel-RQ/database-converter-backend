@@ -46,7 +46,7 @@ public class DataExtractionService {
             List<Future<?>> futures = new ArrayList<>();
             Map<String, Throwable> failedTables = new ConcurrentHashMap<>();
 
-            for (TableDefinition table : metadata.tables()) {
+            for (final TableDefinition table : metadata.tables()) {
                 semaphore.acquire();
 
                 futures.add(
