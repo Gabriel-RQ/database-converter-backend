@@ -3,7 +3,7 @@ package com.gabrielrq.database_converter.service.etl;
 
 import com.gabrielrq.database_converter.domain.DatabaseDefinition;
 import com.gabrielrq.database_converter.domain.MigrationStatus;
-import com.gabrielrq.database_converter.dto.EtlRequest;
+import com.gabrielrq.database_converter.dto.EtlRequestDTO;
 import com.gabrielrq.database_converter.dto.TransformationResult;
 import com.gabrielrq.database_converter.enums.EtlStep;
 import com.gabrielrq.database_converter.repository.EtlStatusRepository;
@@ -37,8 +37,13 @@ public class EtlService {
     }
 
     @Async
-    public void startExtraction(EtlRequest req) {
+    public void startExtraction(EtlRequestDTO req) {
         MigrationStatus status = statusRepository.find(req.id());
+
+        if (status.getStep() != EtlStep.START) {
+            throw new RuntimeException("ID de migração já iniciada."); // lançar excessão personalizada
+        }
+
         status.setStep(EtlStep.EXTRACTION_IN_PROGRESS);
         statusRepository.save(status);
 
@@ -55,8 +60,13 @@ public class EtlService {
     }
 
     @Async
-    public void startTransformation(EtlRequest req) {
+    public void startTransformation(EtlRequestDTO req) {
         MigrationStatus status = statusRepository.find(req.id());
+
+        if (status.getStep() != EtlStep.EXTRACTION_FINISHED) {
+            throw new RuntimeException("ID de migração com extração não finalizada."); // lançar excessão personalizada
+        }
+
         status.setStep(EtlStep.TRANSFORMATION_IN_PROGRESS);
         statusRepository.save(status);
 
@@ -77,8 +87,13 @@ public class EtlService {
 
 
     @Async
-    public void startLoad(EtlRequest req) {
+    public void startLoad(EtlRequestDTO req) {
         MigrationStatus status = statusRepository.find(req.id());
+
+        if (status.getStep() != EtlStep.WAITING_FOR_LOAD_CONFIRMATION && status.getStep() != EtlStep.TRANSFORMATION_FINISHED) {
+            throw new RuntimeException("ID de migração com transformação não finalizada."); // lançar excessão personalizada
+        }
+
         status.setStep(EtlStep.LOAD_IN_PROGRESS);
         statusRepository.save(status);
 
