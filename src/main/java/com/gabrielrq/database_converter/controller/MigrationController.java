@@ -7,12 +7,11 @@ import com.gabrielrq.database_converter.dto.StartMigrationRequestDTO;
 import com.gabrielrq.database_converter.mapper.Mapper;
 import com.gabrielrq.database_converter.service.etl.EtlService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-@Controller
+@RestController
 @RequestMapping("/api/v1/migration")
 public class MigrationController {
 
@@ -42,7 +41,7 @@ public class MigrationController {
 
     @PostMapping("/load")
     public ResponseEntity<Void> startLoad(@RequestBody EtlRequestDTO etlRequestDTO) {
-        etlService.startLoad(etlRequestDTO);
+        etlService.startLoading(etlRequestDTO);
         return ResponseEntity.ok().build();
     }
 
