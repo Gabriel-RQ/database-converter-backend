@@ -30,19 +30,19 @@ public class MigrationController {
     @PostMapping("/extract")
     public ResponseEntity<Void> startExtraction(@RequestBody EtlRequestDTO etlRequestDTO) {
         etlService.startExtraction(etlRequestDTO);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.accepted().build();
     }
 
     @PostMapping("/transform")
     public ResponseEntity<Void> startTransformation(@RequestBody EtlRequestDTO etlRequestDTO) {
         etlService.startTransformation(etlRequestDTO);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.accepted().build();
     }
 
     @PostMapping("/load")
     public ResponseEntity<Void> startLoad(@RequestBody EtlRequestDTO etlRequestDTO) {
         etlService.startLoading(etlRequestDTO);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.accepted().build();
     }
 
     @GetMapping("/status/{id}")
