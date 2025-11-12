@@ -6,6 +6,7 @@ import com.gabrielrq.database_converter.domain.builder.ColumnDefinitionBuilder;
 import com.gabrielrq.database_converter.domain.builder.DatabaseDefinitionBuilder;
 import com.gabrielrq.database_converter.domain.builder.TableDefinitionBuilder;
 import com.gabrielrq.database_converter.dto.TransformationResult;
+import com.gabrielrq.database_converter.exception.TransformationException;
 import com.gabrielrq.database_converter.service.JsonService;
 import com.gabrielrq.database_converter.service.SqlService;
 import com.gabrielrq.database_converter.util.TableDependencyResolver;
@@ -58,7 +59,7 @@ public class DataTransformationService {
 
             return new TransformationResult(targetMetadata, orderedTables);
         } catch (IOException e) {
-            throw new RuntimeException(e); // lançar excessão personalizada que será tratada pela aplicação
+            throw new TransformationException("Falha na transformação. Detalhes: " + e.getMessage());
         }
     }
 

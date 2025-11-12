@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.gabrielrq.database_converter.exception.JsonException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -41,7 +42,7 @@ public class JsonService {
             }
             mapper.writeValue(outputFile.toFile(), object);
         } catch (IOException e) {
-            throw new RuntimeException(e); // lançar excessão personalizada a ser tratada pela aplicação
+            throw new JsonException("Erro ao escrever JSON. Detalhes: " + e.getMessage());
         }
     }
 
@@ -118,7 +119,7 @@ public class JsonService {
                 generator.flush();
             }
         } catch (IOException | SQLException e) {
-            throw new RuntimeException(e); // lançar excessão personalizada a ser tratada pela aplicação
+            throw new JsonException("Erro ao escrever JSON. Detalhes: " + e.getMessage());
         }
     }
 

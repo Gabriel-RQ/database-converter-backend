@@ -7,6 +7,7 @@ import com.gabrielrq.database_converter.domain.builder.TableDefinitionBuilder;
 import com.gabrielrq.database_converter.domain.DatabaseDefinition;
 import com.gabrielrq.database_converter.domain.TableDefinition;
 import com.gabrielrq.database_converter.dto.DbConnectionConfigDTO;
+import com.gabrielrq.database_converter.exception.ExtractionException;
 import com.gabrielrq.database_converter.service.DatabaseConnectionService;
 import com.gabrielrq.database_converter.service.JsonService;
 import org.springframework.beans.factory.annotation.Value;
@@ -80,7 +81,7 @@ public class DataExtractionService {
             boolean isTerminated = executor.awaitTermination(30, TimeUnit.MINUTES);
 
             if (!isTerminated) {
-                throw new RuntimeException("Executor did not terminate successfully"); // lançar excessão personalizada a ser tratada pela aplicação
+                throw new ExtractionException("Falha na finalização das threads: o executor não finalizou corretamente.");
             }
 
             for (var future : futures) {
@@ -88,11 +89,11 @@ public class DataExtractionService {
             }
 
             if (!failedTables.isEmpty()) {
-                throw new RuntimeException("A table failed to be saved"); // lançar excessão personalizada a ser tratada pela aplicação
+                throw new ExtractionException("Falha na extração dos dados: dados de uma ou mais tabelas não obtidos.");
             }
 
         } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e); // lançar excessão personalizada a ser tratada pela aplicação
+            throw new ExtractionException("Falha na extração dos dados: a execução das threads foi interrompida. Detalhe: " + e.getMessage());
         }
     }
 
@@ -198,7 +199,7 @@ public class DataExtractionService {
             storeToJSON(config, metadata);
             return metadata;
         } catch (SQLException e) {
-            throw new RuntimeException(e); // lançar excessão customizada que será tratada pela aplicação
+            throw new ExtractionException("Falha na extração de dados. Detalhe: " + e.getMessage());
         }
     }
 

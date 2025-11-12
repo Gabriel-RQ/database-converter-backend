@@ -1,13 +1,11 @@
 package com.gabrielrq.database_converter.service.etl;
 
 
-import com.gabrielrq.database_converter.domain.DatabaseDefinition;
 import com.gabrielrq.database_converter.domain.MigrationStatus;
 import com.gabrielrq.database_converter.dto.EtlRequestDTO;
-import com.gabrielrq.database_converter.dto.TransformationResult;
 import com.gabrielrq.database_converter.enums.EtlStep;
+import com.gabrielrq.database_converter.exception.InvalidMigrationStateException;
 import com.gabrielrq.database_converter.repository.EtlStatusRepository;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -15,15 +13,12 @@ import java.util.UUID;
 
 @Service
 public class EtlService {
-    private final DataExtractionService extractionService;
-    private final DataTransformationService transformationService;
-    private final DataLoadingService loadingService;
+
+    private final AsyncEtlExecutorService asyncEtlExecutorService;
     private final EtlStatusRepository statusRepository;
 
-    public EtlService(DataExtractionService extractionService, DataTransformationService transformationService, DataLoadingService loadingService, EtlStatusRepository statusRepository) {
-        this.extractionService = extractionService;
-        this.transformationService = transformationService;
-        this.loadingService = loadingService;
+    public EtlService(AsyncEtlExecutorService asyncEtlExecutor, EtlStatusRepository statusRepository) {
+        this.asyncEtlExecutorService = asyncEtlExecutor;
         this.statusRepository = statusRepository;
     }
 
@@ -36,77 +31,34 @@ public class EtlService {
         return status;
     }
 
-    @Async
     public void startExtraction(EtlRequestDTO req) {
         MigrationStatus status = statusRepository.find(req.id());
 
         if (status.getStep() != EtlStep.START) {
-            throw new RuntimeException("ID de migração já iniciada."); // lançar excessão personalizada
+            throw new InvalidMigrationStateException("Migração com ID '" + status.getId() + "' já foi iniciada.");
         }
 
-        status.setStep(EtlStep.EXTRACTION_IN_PROGRESS);
-        statusRepository.save(status);
-
-        try {
-            DatabaseDefinition metadata = extractionService.extract(req.config());
-            status.setMetadata(metadata);
-            status.setStep(EtlStep.EXTRACTION_FINISHED);
-            statusRepository.save(status);
-        } catch (Exception e) {
-            status.setStep(EtlStep.ERROR);
-            status.setMessage(e.getMessage());
-            statusRepository.save(status);
-        }
+        asyncEtlExecutorService.startExtraction(req, status);
     }
 
-    @Async
     public void startTransformation(EtlRequestDTO req) {
         MigrationStatus status = statusRepository.find(req.id());
 
         if (status.getStep() != EtlStep.EXTRACTION_FINISHED) {
-            throw new RuntimeException("ID de migração com extração não finalizada."); // lançar excessão personalizada
+            throw new InvalidMigrationStateException("Migração com ID '" + status.getId() + "' possui etapa de extração pendente.");
         }
 
-        status.setStep(EtlStep.TRANSFORMATION_IN_PROGRESS);
-        statusRepository.save(status);
-
-        try {
-            TransformationResult result = transformationService.transform(status.getMetadata(), req.target());
-            status.setMetadata(result.metadata());
-            status.setExecutionOrder(result.executionList());
-            status.setStep(EtlStep.TRANSFORMATION_FINISHED);
-            statusRepository.save(status);
-            status.setStep(EtlStep.WAITING_FOR_LOAD_CONFIRMATION);
-            statusRepository.save(status);
-        } catch (Exception e) {
-            status.setStep(EtlStep.ERROR);
-            status.setMessage(e.getMessage());
-            statusRepository.save(status);
-        }
+        asyncEtlExecutorService.startTransformation(req, status);
     }
 
-
-    @Async
-    public void startLoad(EtlRequestDTO req) {
+    public void startLoading(EtlRequestDTO req) {
         MigrationStatus status = statusRepository.find(req.id());
 
         if (status.getStep() != EtlStep.WAITING_FOR_LOAD_CONFIRMATION && status.getStep() != EtlStep.TRANSFORMATION_FINISHED) {
-            throw new RuntimeException("ID de migração com transformação não finalizada."); // lançar excessão personalizada
+            throw new InvalidMigrationStateException("Migração com ID '" + status.getId() + "' possui etapa de transformação pendente.");
         }
 
-        status.setStep(EtlStep.LOAD_IN_PROGRESS);
-        statusRepository.save(status);
-
-        try {
-            loadingService.load(req.config(), new TransformationResult(status.getMetadata(), status.getExecutionOrder()));
-            status.setStep(EtlStep.FINISHED);
-            status.setFinishedAt(LocalDateTime.now());
-            statusRepository.save(status);
-        } catch (Exception e) {
-            status.setStep(EtlStep.ERROR);
-            status.setMessage(e.getMessage());
-            statusRepository.save(status);
-        }
+        asyncEtlExecutorService.startLoading(req, status);
     }
 
     public MigrationStatus getCurrentStatus(UUID id) {

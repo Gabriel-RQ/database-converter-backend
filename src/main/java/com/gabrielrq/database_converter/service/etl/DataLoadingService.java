@@ -3,6 +3,7 @@ package com.gabrielrq.database_converter.service.etl;
 import com.gabrielrq.database_converter.domain.TableDefinition;
 import com.gabrielrq.database_converter.dto.DbConnectionConfigDTO;
 import com.gabrielrq.database_converter.dto.TransformationResult;
+import com.gabrielrq.database_converter.exception.LoadingException;
 import com.gabrielrq.database_converter.service.DatabaseConnectionService;
 import com.gabrielrq.database_converter.service.SqlService;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -39,7 +40,7 @@ public class DataLoadingService {
                 template.execute(sql);
             } catch (FileNotFoundException ignored) {
             } catch (IOException e) {
-                throw new RuntimeException(e); // lançar excessão customizada a ser tratada pela aplicação (todas as tabelas devem ser criadas)
+                throw new LoadingException("Erro na carga de dados. Detalhe: " + e.getMessage());
             }
         }
     }
@@ -58,7 +59,7 @@ public class DataLoadingService {
                 }
             }
         } catch (IOException | SQLException e) {
-            throw new RuntimeException("Erro ao executar DML para tabela ", e);
+            throw new LoadingException("Erro ao executar DML para tabela. Detalhe: " + e.getMessage());
         }
     }
 }

@@ -3,6 +3,7 @@ package com.gabrielrq.database_converter.service;
 import com.gabrielrq.database_converter.domain.ColumnDefinition;
 import com.gabrielrq.database_converter.domain.DatabaseDefinition;
 import com.gabrielrq.database_converter.domain.TableDefinition;
+import com.gabrielrq.database_converter.exception.SqlException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -44,7 +45,7 @@ public class SqlService {
                 writer.write(content);
             }
         } catch (IOException e) {
-            throw new RuntimeException(e); // // lançar excessão personalizada a ser tratada pela aplicação
+            throw new SqlException("Erro ao escrever arquivo SQL. Detalhes: " + e.getMessage());
         }
     }
 
@@ -144,7 +145,7 @@ public class SqlService {
         } catch (FileNotFoundException e) {
             return false;
         } catch (IOException e) {
-            throw new RuntimeException(e); // lançar excessão personalizada a ser tratada pela aplicação
+            throw new SqlException("Erro ao gerar DML para a tabela '" + table.name() + "'. Detalhes: " + e.getMessage());
         }
         return true;
     }
