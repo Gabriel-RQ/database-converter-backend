@@ -45,7 +45,7 @@ public class EtlService {
         MigrationStatus status = statusRepository.find(req.id());
 
         if (status.getStep() != EtlStep.EXTRACTION_FINISHED) {
-            throw new InvalidMigrationStateException("Migração com ID '" + status.getId() + "' possui etapa de extração pendente.");
+            throw new InvalidMigrationStateException("Migração com ID '" + status.getId() + "' não pode iniciar transformação, pois não possui extração finalizada.");
         }
 
         asyncEtlExecutorService.startTransformation(req, status);
@@ -55,10 +55,20 @@ public class EtlService {
         MigrationStatus status = statusRepository.find(req.id());
 
         if (status.getStep() != EtlStep.WAITING_FOR_LOAD_CONFIRMATION && status.getStep() != EtlStep.TRANSFORMATION_FINISHED) {
-            throw new InvalidMigrationStateException("Migração com ID '" + status.getId() + "' possui etapa de transformação pendente.");
+            throw new InvalidMigrationStateException("Migração com ID '" + status.getId() + "' não possui etapa de transformação finalizada, nem está aguardando para confirmação de carga.");
         }
 
         asyncEtlExecutorService.startLoading(req, status);
+    }
+
+    public void startConsistencyValidation(EtlRequestDTO req) {
+        MigrationStatus status = statusRepository.find(req.id());
+
+        if (status.getStep() != EtlStep.LOAD_FINISHED) {
+            throw new InvalidMigrationStateException("Migração com ID '" + status.getId() + "' não pode ser validada, pois possui etapa de carga pendente.");
+        }
+
+        asyncEtlExecutorService.startConsistencyValidation(req, status);
     }
 
     public MigrationStatus getCurrentStatus(UUID id) {

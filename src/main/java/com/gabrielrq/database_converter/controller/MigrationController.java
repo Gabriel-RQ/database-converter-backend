@@ -45,6 +45,12 @@ public class MigrationController {
         return ResponseEntity.accepted().build();
     }
 
+    @PostMapping("/validate")
+    public ResponseEntity<Void> startValidation(@RequestBody EtlRequestDTO etlRequestDTO) {
+        etlService.startConsistencyValidation(etlRequestDTO);
+        return ResponseEntity.accepted().build();
+    }
+
     @GetMapping("/status/{id}")
     public ResponseEntity<MigrationStatusDTO> getStatus(@PathVariable UUID id) {
         MigrationStatus status = etlService.getCurrentStatus(id);
