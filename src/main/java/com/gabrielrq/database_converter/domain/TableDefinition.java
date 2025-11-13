@@ -10,4 +10,16 @@ public record TableDefinition(
         List<List<String>> uniqueConstraints,
         String schema
 ) {
+
+    @Override
+    public boolean equals(Object object) {
+        if (!(object instanceof TableDefinition that)) return false;
+
+        return name.equalsIgnoreCase(that.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return name.hashCode();
+    }
 }

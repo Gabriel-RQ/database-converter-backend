@@ -13,4 +13,18 @@ public record ColumnDefinition(
         String defaultValue,
         Integer ordinalPosition
 ) {
+
+    @Override
+    public boolean equals(Object object) {
+        if (!(object instanceof ColumnDefinition that)) return false;
+
+        return name.equalsIgnoreCase(that.name) && genericType.equals(that.genericType);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = name.hashCode();
+        result = 31 * result + genericType.hashCode();
+        return result;
+    }
 }
