@@ -92,9 +92,12 @@ public class SqlService {
         }
     }
 
-    public void updateDDL(String name, String filename, String content) {
-        Path path = Path.of(basePath).resolve(name).resolve(ddlPath).resolve(filename);
-        write(path, content);
+    public void updateDDL(String name, List<SqlDTO> sqlFiles) {
+        Path path = Path.of(basePath).resolve(name).resolve(ddlPath);
+
+        for (var file : sqlFiles) {
+            write(path.resolve(file.filename()), file.content());
+        }
     }
 
     public void bufferReadAndExec(Path path, Statement statement) throws IOException, SQLException {

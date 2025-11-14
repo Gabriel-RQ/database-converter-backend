@@ -8,6 +8,7 @@ import com.gabrielrq.database_converter.service.etl.EtlService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -33,9 +34,9 @@ public class SqlController {
     }
 
     @PutMapping("/update/{id}")
-    public ResponseEntity<Void> updateSqlFile(@PathVariable UUID id, @RequestBody SqlDTO sqlDTO) {
+    public ResponseEntity<Void> updateSqlFile(@PathVariable UUID id, @RequestBody List<SqlDTO> sqlFiles) {
         MigrationStatus status = etlService.getCurrentStatus(id);
-        sqlService.updateDDL(status.getName(), sqlDTO.filename(), sqlDTO.content());
+        sqlService.updateDDL(status.getName(), sqlFiles);
         return ResponseEntity.noContent().build();
     }
 }
