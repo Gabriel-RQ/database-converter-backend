@@ -17,7 +17,7 @@
   "16": "BOOLEAN",
   "-4": "BLOB SUB_TYPE 0",
   "-3": "BLOB SUB_TYPE 0",
-  "-2": "CHAR FOR BIT DATA",
+  "-2": "BLOB SUB_TYPE 0",
   "-1": "BLOB SUB_TYPE TEXT",
   "2004": "BLOB SUB_TYPE 0",
   "2005": "BLOB SUB_TYPE TEXT",
