@@ -36,7 +36,7 @@ public class DataLoadingService {
     private void executeDDL(List<TableDefinition> executionList, Path basePath, JdbcTemplate template) {
         for (var table : executionList) {
             try {
-                String sql = sqlService.read(basePath.resolve("ddl").resolve(table.schema() + "." + table.name() + ".sql"));
+                String sql = sqlService.read(basePath.resolve("ddl").resolve(/* table.schema() + "."  + */ table.name() + ".sql"));
                 template.execute(sql);
             } catch (FileNotFoundException ignored) {
             } catch (IOException e) {
@@ -52,14 +52,16 @@ public class DataLoadingService {
         ) {
             for (final var table : executionList) {
                 try {
-                    Path dmlPath = basePath.resolve("dml").resolve(table.schema() + "." + table.name() + ".sql");
+                    Path dmlPath = basePath.resolve("dml").resolve(/* table.schema() + "." + */ table.name() + ".sql");
                     sqlService.bufferReadAndExec(dmlPath, stmt);
                     connection.commit();
                 } catch (FileNotFoundException ignored) {
+                } catch (SQLException e) {
+                    throw new LoadingException("Erro ao executar DML para tabela '" + table.name() + "'. Detalhe: " + e.getMessage());
                 }
             }
         } catch (IOException | SQLException e) {
-            throw new LoadingException("Erro ao executar DML para tabela. Detalhe: " + e.getMessage());
+            throw new LoadingException("Erro ao executar DML. Detalhe: " + e.getMessage());
         }
     }
 }
