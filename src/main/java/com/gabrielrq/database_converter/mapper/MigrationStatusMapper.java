@@ -3,7 +3,7 @@ package com.gabrielrq.database_converter.mapper;
 import com.gabrielrq.database_converter.domain.MigrationStatus;
 import com.gabrielrq.database_converter.dto.MigrationStatusDTO;
 
-public class Mapper {
+public class MigrationStatusMapper {
 
     public static MigrationStatusDTO toMigrationStatusDTO(MigrationStatus status) {
         return new MigrationStatusDTO(

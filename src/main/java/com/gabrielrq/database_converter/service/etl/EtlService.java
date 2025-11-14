@@ -2,7 +2,7 @@ package com.gabrielrq.database_converter.service.etl;
 
 
 import com.gabrielrq.database_converter.domain.MigrationStatus;
-import com.gabrielrq.database_converter.dto.EtlRequestDTO;
+import com.gabrielrq.database_converter.domain.EtlRequest;
 import com.gabrielrq.database_converter.enums.EtlStep;
 import com.gabrielrq.database_converter.exception.InvalidMigrationStateException;
 import com.gabrielrq.database_converter.repository.EtlStatusRepository;
@@ -31,7 +31,7 @@ public class EtlService {
         return status;
     }
 
-    public void startExtraction(EtlRequestDTO req) {
+    public void startExtraction(EtlRequest req) {
         MigrationStatus status = statusRepository.find(req.id());
 
         if (status.getStep() != EtlStep.START) {
@@ -41,7 +41,7 @@ public class EtlService {
         asyncEtlExecutorService.startExtraction(req, status);
     }
 
-    public void startTransformation(EtlRequestDTO req) {
+    public void startTransformation(EtlRequest req) {
         MigrationStatus status = statusRepository.find(req.id());
 
         if (status.getStep() != EtlStep.EXTRACTION_FINISHED) {
@@ -51,7 +51,7 @@ public class EtlService {
         asyncEtlExecutorService.startTransformation(req, status);
     }
 
-    public void startLoading(EtlRequestDTO req) {
+    public void startLoading(EtlRequest req) {
         MigrationStatus status = statusRepository.find(req.id());
 
         if (status.getStep() != EtlStep.WAITING_FOR_LOAD_CONFIRMATION && status.getStep() != EtlStep.TRANSFORMATION_FINISHED) {
@@ -61,7 +61,7 @@ public class EtlService {
         asyncEtlExecutorService.startLoading(req, status);
     }
 
-    public void startConsistencyValidation(EtlRequestDTO req) {
+    public void startConsistencyValidation(EtlRequest req) {
         MigrationStatus status = statusRepository.find(req.id());
 
         if (status.getStep() != EtlStep.LOAD_FINISHED) {

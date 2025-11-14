@@ -2,7 +2,7 @@ package com.gabrielrq.database_converter.service.etl;
 
 import com.gabrielrq.database_converter.domain.TableDefinition;
 import com.gabrielrq.database_converter.dto.DbConnectionConfigDTO;
-import com.gabrielrq.database_converter.dto.TransformationResult;
+import com.gabrielrq.database_converter.domain.TransformationResult;
 import com.gabrielrq.database_converter.exception.LoadingException;
 import com.gabrielrq.database_converter.service.DatabaseConnectionService;
 import com.gabrielrq.database_converter.service.SqlService;

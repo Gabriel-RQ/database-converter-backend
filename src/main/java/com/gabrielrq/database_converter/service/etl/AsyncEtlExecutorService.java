@@ -3,8 +3,8 @@ package com.gabrielrq.database_converter.service.etl;
 import com.gabrielrq.database_converter.domain.DatabaseDefinition;
 import com.gabrielrq.database_converter.domain.MigrationStatus;
 import com.gabrielrq.database_converter.dto.ConsistencyValidationDataDTO;
-import com.gabrielrq.database_converter.dto.EtlRequestDTO;
-import com.gabrielrq.database_converter.dto.TransformationResult;
+import com.gabrielrq.database_converter.domain.EtlRequest;
+import com.gabrielrq.database_converter.domain.TransformationResult;
 import com.gabrielrq.database_converter.enums.EtlStep;
 import com.gabrielrq.database_converter.repository.EtlStatusRepository;
 import com.gabrielrq.database_converter.service.ConsistencyValidationService;
@@ -36,7 +36,7 @@ public class AsyncEtlExecutorService {
     }
 
     @Async
-    public void startExtraction(EtlRequestDTO req, MigrationStatus status) {
+    public void startExtraction(EtlRequest req, MigrationStatus status) {
         status.setStep(EtlStep.EXTRACTION_IN_PROGRESS);
         statusRepository.save(status);
 
@@ -53,7 +53,7 @@ public class AsyncEtlExecutorService {
     }
 
     @Async
-    public void startTransformation(EtlRequestDTO req, MigrationStatus status) {
+    public void startTransformation(EtlRequest req, MigrationStatus status) {
         status.setStep(EtlStep.TRANSFORMATION_IN_PROGRESS);
         statusRepository.save(status);
 
@@ -73,7 +73,7 @@ public class AsyncEtlExecutorService {
     }
 
     @Async
-    public void startLoading(EtlRequestDTO req, MigrationStatus status) {
+    public void startLoading(EtlRequest req, MigrationStatus status) {
         status.setStep(EtlStep.LOAD_IN_PROGRESS);
         statusRepository.save(status);
 
@@ -89,7 +89,7 @@ public class AsyncEtlExecutorService {
     }
 
     @Async
-    public void startConsistencyValidation(EtlRequestDTO req, MigrationStatus status) {
+    public void startConsistencyValidation(EtlRequest req, MigrationStatus status) {
         status.setStep(EtlStep.VALIDATION_IN_PROGRESS);
         statusRepository.save(status);
 

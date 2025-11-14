@@ -5,7 +5,7 @@ import com.gabrielrq.database_converter.domain.TableDefinition;
 import com.gabrielrq.database_converter.domain.builder.ColumnDefinitionBuilder;
 import com.gabrielrq.database_converter.domain.builder.DatabaseDefinitionBuilder;
 import com.gabrielrq.database_converter.domain.builder.TableDefinitionBuilder;
-import com.gabrielrq.database_converter.dto.TransformationResult;
+import com.gabrielrq.database_converter.domain.TransformationResult;
 import com.gabrielrq.database_converter.exception.TransformationException;
 import com.gabrielrq.database_converter.service.JsonService;
 import com.gabrielrq.database_converter.service.SqlService;
