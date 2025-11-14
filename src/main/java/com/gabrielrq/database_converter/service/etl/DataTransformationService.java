@@ -52,7 +52,7 @@ public class DataTransformationService {
             var targetMetadata = mapTargetTypes(metadata, targetConversioMap);
             Path outputPath = Path.of(metadata.name());
             jsonService.write(targetMetadata, outputPath.resolve("target.meta").toString());
-            sqlService.generate(targetMetadata);
+            sqlService.generate(targetMetadata, targetConversioMap, target);
 
             List<TableDefinition> orderedTables = TableDependencyResolver.sortTablesByDependency(targetMetadata.tables());
             jsonService.write(orderedTables.stream().map(TableDefinition::name).toList(), outputPath.resolve("target.load_order").toString());

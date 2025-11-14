@@ -6,6 +6,7 @@ import com.gabrielrq.database_converter.domain.TableDefinition;
 import com.gabrielrq.database_converter.dto.SqlDTO;
 import com.gabrielrq.database_converter.dto.SqlPageDTO;
 import com.gabrielrq.database_converter.exception.SqlException;
+import com.gabrielrq.database_converter.util.FirebirdBlobHelper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -123,12 +124,12 @@ public class SqlService {
         }
     }
 
-    public void generate(DatabaseDefinition metadata) {
-        generateDDL(metadata);
-        generateDML(metadata);
+    public void generate(DatabaseDefinition metadata, Map<Integer, String> conversionMap, String target) {
+        generateDDL(metadata, conversionMap, target);
+        generateDML(metadata, target);
     }
 
-    public void generateDML(DatabaseDefinition metadata) {
+    public void generateDML(DatabaseDefinition metadata, String target) {
         Path outDir = Path.of(basePath).resolve(metadata.name()).resolve(dmlPath);
         Path tablesPath = Path.of(basePath).resolve(metadata.name()).resolve("tables");
 
@@ -136,15 +137,15 @@ public class SqlService {
             StringBuilder dmlBuilder = new StringBuilder();
             String columns = String.join(",", table.columns().stream().map(ColumnDefinition::name).toList());
 
-            if (!generateDMLData(table, tablesPath, dmlBuilder, columns)) {
+            if (!generateDMLData(table, tablesPath, dmlBuilder, columns, target)) {
                 continue;
             }
 
-            write(outDir.resolve(table.schema() + "." + table.name() + ".sql"), dmlBuilder.toString());
+            write(outDir.resolve(/* table.schema() + "." + */ table.name() + ".sql"), dmlBuilder.toString());
         }
     }
 
-    public void generateDDL(DatabaseDefinition metadata) {
+    public void generateDDL(DatabaseDefinition metadata, Map<Integer, String> conversionMap, String target) {
         // TODO melhorar definição das colunas (quanto aos tipos)
 
         Path outDir = Path.of(basePath).resolve(metadata.name()).resolve(ddlPath);
@@ -152,36 +153,38 @@ public class SqlService {
         for (var table : metadata.tables()) {
             StringBuilder ddlBuilder = new StringBuilder()
                     .append("CREATE TABLE ")
-                    .append(table.schema())
-                    .append(".")
+//                    .append(table.schema())
+//                    .append(".")
+//                    .append("'")
                     .append(table.name())
+//                    .append("'")
                     .append(" (\n");
 
-            generateDDLColumn(table, ddlBuilder);
+            generateDDLColumn(table, ddlBuilder, conversionMap, target);
             generateDDLPk(table, ddlBuilder);
             generateDDLFk(table, ddlBuilder);
             generateDDLUnique(table, ddlBuilder);
 
             ddlBuilder.append("\n);");
-            write(outDir.resolve(table.schema() + "." + table.name() + ".sql"), ddlBuilder.toString());
+            write(outDir.resolve(/* table.schema() + "." + */ table.name() + ".sql"), ddlBuilder.toString());
         }
     }
 
-    private boolean generateDMLData(TableDefinition table, Path tablesPath, StringBuilder dmlBuilder, String columns) {
+    private boolean generateDMLData(TableDefinition table, Path tablesPath, StringBuilder dmlBuilder, String columns, String target) {
         try {
-            List<Map<String, Object>> tableData = jsonService.readTableData(tablesPath.resolve(table.schema() + "." + table.name() + ".json"));
+            List<Map<String, Object>> tableData = jsonService.readTableData(tablesPath.resolve(/* table.schema() + "." + */ table.name() + ".json"));
             if (tableData.isEmpty()) return false;
 
             for (var data : tableData) {
                 dmlBuilder.append("INSERT INTO ")
-                        .append(table.schema())
-                        .append(".")
+//                        .append(table.schema())
+//                        .append(".")
                         .append(table.name())
                         .append(" (")
                         .append(columns)
                         .append(") VALUES ")
                         .append("(")
-                        .append(data.values().stream().map(this::formatDMLValue).collect(Collectors.joining(",")))
+                        .append(data.values().stream().map((d) -> formatDMLValue(d, target)).collect(Collectors.joining(",")))
                         .append(");")
                         .append(System.lineSeparator());
             }
@@ -193,7 +196,7 @@ public class SqlService {
         return true;
     }
 
-    private String formatDMLValue(Object value) {
+    private String formatDMLValue(Object value, String target) {
         if (value == null) {
             return "NULL";
         } else if (value instanceof Number || value instanceof Boolean) {
@@ -202,18 +205,34 @@ public class SqlService {
             String stringValue = value.toString()
                     .replace("'", "''")
                     .replaceAll("[\\u0000-\\u001F\\u007F]", ""); // Remove caracteres de controle
+
+            if ("FIREBIRD".equals(target)) {
+                if (stringValue.matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z")) {
+                    stringValue = stringValue.replace("T", " ").replace("Z", "");
+                } else if (stringValue.matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}[+-]\\d{2}:\\d{2}")) {
+                    stringValue = stringValue.substring(0, 19).replace("T", " ");
+                }
+
+                if (stringValue.length() > 60_000) {
+                    return FirebirdBlobHelper.toFirebirdBlobLiteral(stringValue);
+                }
+            }
+
             return "'" + stringValue + "'";
         }
     }
 
-    private String formatColumnType(ColumnDefinition column) {
+    private String formatColumnType(ColumnDefinition column, Map<Integer, String> conversionMap, String target) {
         String type = column.targetType();
         return switch (column.genericType()) {
             case Types.VARCHAR, Types.NVARCHAR, Types.LONGVARCHAR, Types.LONGNVARCHAR, Types.CHAR -> {
                 if ("TEXT".equalsIgnoreCase(column.originType()) || column.length() >= Integer.MAX_VALUE) {
-                    yield "TEXT";
+                    yield conversionMap.getOrDefault(-1, "TEXT");
                 }
                 if (column.length() > 0) {
+                    if ("FIREBIRD".equals(target)) {
+                        yield type + "(" + column.length() * 3 + ")";
+                    }
                     yield type + "(" + column.length() + ")";
                 }
                 yield type;
@@ -274,14 +293,14 @@ public class SqlService {
         }
     }
 
-    private void generateDDLColumn(TableDefinition table, StringBuilder ddlBuilder) {
+    private void generateDDLColumn(TableDefinition table, StringBuilder ddlBuilder, Map<Integer, String> conversionMap, String target) {
         List<String> columnDefinitions = new ArrayList<>();
         for (var column : table.columns()) {
             StringBuilder columnDef = new StringBuilder();
             columnDef
                     .append(column.name())
                     .append(" ")
-                    .append(formatColumnType(column));
+                    .append(formatColumnType(column, conversionMap, target));
 
 //            if (column.defaultValue() != null && !column.defaultValue().isBlank()) {
 //                columnDef.append(" DEFAULT ");
