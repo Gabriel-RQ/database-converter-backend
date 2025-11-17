@@ -6,9 +6,11 @@ import com.gabrielrq.database_converter.dto.MigrationStatusDTO;
 import com.gabrielrq.database_converter.dto.StartMigrationRequestDTO;
 import com.gabrielrq.database_converter.mapper.EtlRequestMapper;
 import com.gabrielrq.database_converter.mapper.MigrationStatusMapper;
+import com.gabrielrq.database_converter.service.SseService;
 import com.gabrielrq.database_converter.service.etl.EtlService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.UUID;
 
@@ -17,9 +19,11 @@ import java.util.UUID;
 public class MigrationController {
 
     private final EtlService etlService;
+    private final SseService sseService;
 
-    public MigrationController(EtlService etlService) {
+    public MigrationController(EtlService etlService, SseService sseService) {
         this.etlService = etlService;
+        this.sseService = sseService;
     }
 
     @PostMapping("/new")
@@ -56,5 +60,10 @@ public class MigrationController {
     public ResponseEntity<MigrationStatusDTO> getStatus(@PathVariable UUID id) {
         MigrationStatus status = etlService.getCurrentStatus(id);
         return ResponseEntity.ok(MigrationStatusMapper.toMigrationStatusDTO(status));
+    }
+
+    @GetMapping("/{id}/sse")
+    public SseEmitter getSseEvents(@PathVariable UUID id) {
+        return sseService.registerEmitter(id);
     }
 }
