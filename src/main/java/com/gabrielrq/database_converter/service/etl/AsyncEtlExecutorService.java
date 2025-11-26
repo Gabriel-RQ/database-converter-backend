@@ -3,7 +3,6 @@ package com.gabrielrq.database_converter.service.etl;
 import com.gabrielrq.database_converter.domain.DatabaseDefinition;
 import com.gabrielrq.database_converter.domain.MigrationStatus;
 import com.gabrielrq.database_converter.dto.ConsistencyValidationDataDTO;
-import com.gabrielrq.database_converter.domain.EtlRequest;
 import com.gabrielrq.database_converter.domain.TransformationResult;
 import com.gabrielrq.database_converter.enums.EtlStep;
 import com.gabrielrq.database_converter.repository.EtlStatusRepository;
@@ -40,14 +39,14 @@ public class AsyncEtlExecutorService {
     }
 
     @Async
-    public void startExtraction(EtlRequest req, MigrationStatus status) {
+    public void startExtraction(MigrationStatus status) {
         status.setStep(EtlStep.EXTRACTION_IN_PROGRESS);
         statusRepository.save(status);
 
         try {
             sseService.sendMigrationStatusUpdate(status);
-            DatabaseDefinition metadata = extractionService.extract(req.originConfig());
-            status.setMetadata(metadata);
+            DatabaseDefinition metadata = extractionService.extract(status.getMetadata().getOriginConfig());
+            status.getMetadata().setDatabaseMetadata(metadata);
             status.setStep(EtlStep.EXTRACTION_FINISHED);
             statusRepository.save(status);
         } catch (Exception e) {
@@ -60,15 +59,15 @@ public class AsyncEtlExecutorService {
     }
 
     @Async
-    public void startTransformation(EtlRequest req, MigrationStatus status) {
+    public void startTransformation(MigrationStatus status) {
         status.setStep(EtlStep.TRANSFORMATION_IN_PROGRESS);
         statusRepository.save(status);
 
         try {
             sseService.sendMigrationStatusUpdate(status);
-            TransformationResult result = transformationService.transform(status.getMetadata(), req.target());
-            status.setMetadata(result.metadata());
-            status.setExecutionOrder(result.executionList());
+            TransformationResult result = transformationService.transform(status.getMetadata().getDatabaseMetadata(), status.getMetadata().getTarget());
+            status.getMetadata().setDatabaseMetadata(result.metadata());
+            status.getMetadata().setExecutionOrder(result.executionList());
             status.setStep(EtlStep.TRANSFORMATION_FINISHED);
             statusRepository.save(status);
             status.setStep(EtlStep.WAITING_FOR_LOAD_CONFIRMATION);
@@ -83,13 +82,16 @@ public class AsyncEtlExecutorService {
     }
 
     @Async
-    public void startLoading(EtlRequest req, MigrationStatus status) {
+    public void startLoading(MigrationStatus status) {
         status.setStep(EtlStep.LOAD_IN_PROGRESS);
         statusRepository.save(status);
 
         try {
             sseService.sendMigrationStatusUpdate(status);
-            loadingService.load(req.targetConfig(), new TransformationResult(status.getMetadata(), status.getExecutionOrder()));
+            loadingService.load(
+                    status.getMetadata().getTargetConfig(),
+                    new TransformationResult(status.getMetadata().getDatabaseMetadata(), status.getMetadata().getExecutionOrder())
+            );
             status.setStep(EtlStep.LOAD_FINISHED);
             statusRepository.save(status);
         } catch (Exception e) {
@@ -102,13 +104,15 @@ public class AsyncEtlExecutorService {
     }
 
     @Async
-    public void startConsistencyValidation(EtlRequest req, MigrationStatus status) {
+    public void startConsistencyValidation(MigrationStatus status) {
         status.setStep(EtlStep.VALIDATION_IN_PROGRESS);
         statusRepository.save(status);
 
         try {
             sseService.sendMigrationStatusUpdate(status);
-            ConsistencyValidationDataDTO validationData = consistencyValidationService.validate(req.originConfig(), req.targetConfig());
+            ConsistencyValidationDataDTO validationData = consistencyValidationService.validate(
+                    status.getMetadata().getOriginConfig(), status.getMetadata().getTargetConfig()
+            );
             status.setMessage(String.join(System.lineSeparator(), validationData.messages()));
             status.setStep(EtlStep.FINISHED);
             status.setFinishedAt(LocalDateTime.now());
