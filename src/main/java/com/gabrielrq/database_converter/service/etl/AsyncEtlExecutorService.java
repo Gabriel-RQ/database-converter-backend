@@ -40,6 +40,7 @@ public class AsyncEtlExecutorService {
 
     @Async
     public void startExtraction(MigrationStatus status) {
+        sseService.sendMigrationStatusUpdate(status);
         status.setStep(EtlStep.EXTRACTION_IN_PROGRESS);
         statusRepository.save(status);
 

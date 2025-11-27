@@ -28,8 +28,17 @@ public class SseService {
         emitter.onTimeout(() -> sseEmitterRepository.delete(id));
         emitter.onError((e) -> sseEmitterRepository.delete(id));
 
+        sendRegistrationConfirmation(emitter);
+
         sseEmitterRepository.save(id, emitter);
         return emitter;
+    }
+
+    private void sendRegistrationConfirmation(SseEmitter emitter) {
+        try {
+            emitter.send("Emissor de SSE registrado");
+        } catch (IOException ignored) {
+        }
     }
 
     public void sendMigrationStatusUpdate(MigrationStatus status) {
