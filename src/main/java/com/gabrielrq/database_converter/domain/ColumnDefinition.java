@@ -18,7 +18,7 @@ public record ColumnDefinition(
     public boolean equals(Object object) {
         if (!(object instanceof ColumnDefinition that)) return false;
 
-        return name.equalsIgnoreCase(that.name) && genericType.equals(that.genericType);
+        return name.equalsIgnoreCase(that.name);
     }
 
     @Override
