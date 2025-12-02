@@ -4,6 +4,7 @@ import com.gabrielrq.database_converter.domain.MigrationStatus;
 import com.gabrielrq.database_converter.exception.NonExistingSseEmitterException;
 import com.gabrielrq.database_converter.mapper.MigrationStatusMapper;
 import com.gabrielrq.database_converter.repository.SseEmitterRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.http.MediaType;
@@ -16,6 +17,9 @@ import java.util.UUID;
 @Service
 public class SseService {
 
+    @Value("${migration.sse.timeout:0}")
+    private long sseTimeout;
+
     private final SseEmitterRepository sseEmitterRepository;
 
     public SseService(SseEmitterRepository sseEmitterRepository) {
@@ -23,7 +27,7 @@ public class SseService {
     }
 
     public SseEmitter registerEmitter(UUID id) {
-        SseEmitter emitter = new SseEmitter(0L);
+        SseEmitter emitter = new SseEmitter(sseTimeout);
 
         emitter.onCompletion(() -> sseEmitterRepository.delete(id));
         emitter.onTimeout(() -> sseEmitterRepository.delete(id));

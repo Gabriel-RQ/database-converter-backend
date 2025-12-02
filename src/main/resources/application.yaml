@@ -17,3 +17,5 @@ migration:
       path: ./ddl/
     dml:
       path: ./dml/
+  sse:
+    timeout: 172800000 # 2 days
