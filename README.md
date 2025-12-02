@@ -6,6 +6,8 @@ This repository contains the backend implementation for the Database Converter A
 
 This project was first developed as part of my course completion paper.
 
+A frontend implementation for this API can be found [here](https://github.com/Gabriel-RQ/database-converter-frontend).
+
 ## How to run
 
 1. Clone this repository:
@@ -37,6 +39,8 @@ PUT /api/v1/migrations/{id}/sql - Updates DDL SQL files generated for a migratio
 Esse repositório contém a implementação do backend da API de Conversão de Bases de dados. Utiliza Java e SpringBoot.
 
 Esse projeto foi desenvolvido inicialmente como parte de meu Trabalho de Conclusão de Curso.
+
+A implementação de um frontend para essa API pode ser encontrada [aqui](https://github.com/Gabriel-RQ/database-converter-frontend).
 
 ## How to run
 
