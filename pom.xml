@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.gabrielrq</groupId>
 	<artifactId>database-converter</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0.0</version>
 	<name>Database Converter</name>
 	<description>Database Converter Tool API</description>
 	<url/>
@@ -63,6 +63,7 @@
 	</dependencies>
 
 	<build>
+		<finalName>database-converter-api-${project.version}</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
