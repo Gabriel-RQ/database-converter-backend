@@ -124,7 +124,7 @@ public class AsyncEtlExecutorService {
             statusRepository.save(status);
         } finally {
             sseService.sendMigrationStatusUpdate(status);
-            sseService.sendSseCompletion(status.getId());
+            sseService.completeSseEmitter(status.getId());
         }
     }
 }

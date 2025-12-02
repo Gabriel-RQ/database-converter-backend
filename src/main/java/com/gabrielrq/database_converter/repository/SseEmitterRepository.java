@@ -4,6 +4,7 @@ import com.gabrielrq.database_converter.exception.NonExistingSseEmitterException
 import org.springframework.stereotype.Repository;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,5 +26,13 @@ public class SseEmitterRepository {
             throw new NonExistingSseEmitterException("Nenhum emissor de SSE vinculado ao ID '" + id + "' encontrado. Experimente abrir uma conexão SSE para essa migração.");
         }
         return repo.get(id);
+    }
+
+    public List<SseEmitter> findAll() {
+        return repo.values().stream().toList();
+    }
+
+    public synchronized void clear() {
+        repo.clear();
     }
 }
