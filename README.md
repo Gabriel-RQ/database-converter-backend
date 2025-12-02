@@ -14,9 +14,14 @@ A frontend implementation for this API can be found [here](https://github.com/Ga
 ```bash
 git clone https://github.com/Gabriel-RQ/database-converter-backend
 ```
-2. Execute the server:
+2. Build the artifact:
 ```bash
 mvn clean package -DskipTests
+```
+3. Execute the server:
+```bash
+java -jar target/database-converter-api-1.0.0.jar
+# Artifact name may change with version updates!
 ```
 
 ## API
@@ -34,7 +39,7 @@ GET /api/v1/migrations/{id}/sql - Retrieves DDL SQL files generated for a migrat
 PUT /api/v1/migrations/{id}/sql - Updates DDL SQL files generated for a migration
 ```
 
-**[Portuguese]**
+**[Português]**
 
 Esse repositório contém a implementação do backend da API de Conversão de Bases de dados. Utiliza Java e SpringBoot.
 
@@ -48,9 +53,14 @@ A implementação de um frontend para essa API pode ser encontrada [aqui](https:
 ```bash
 git clone https://github.com/Gabriel-RQ/database-converter-backend
 ```
-2. Execute o servidor:
+2. Faça o build do artefato java:
 ```bash
 mvn clean package -DskipTests
+```
+3. Execute o servidor:
+```bash
+java -jar target/database-converter-api-1.0.0.jar
+# O nome do artefato pode mudar com atualizações de versão!
 ```
 
 ## API
