@@ -21,8 +21,8 @@ mvn clean package -DskipTests
 3. Execute the server:
 ```bash
 java -jar target/database-converter-api-1.0.0.jar
-# Artifact name may change with version updates!
 ```
+> Artifact name may change with version updates!
 
 ## API
 
@@ -60,8 +60,8 @@ mvn clean package -DskipTests
 3. Execute o servidor:
 ```bash
 java -jar target/database-converter-api-1.0.0.jar
-# O nome do artefato pode mudar com atualizações de versão!
 ```
+> O nome do artefato pode mudar com atualizações de versão!
 
 ## API
 
