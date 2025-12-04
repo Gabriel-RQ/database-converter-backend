@@ -39,7 +39,7 @@ public class ConsistencyValidationService {
                 continue;
             }
 
-            var targetTable = targetTableMap.get(table.name());
+            var targetTable = targetTableMap.get(table.name().toLowerCase());
             for (var column : table.columns()) {
                 if (!targetTable.columns().contains(column)) {
                     messages.add("Falha estrutural: coluna '%s.%s' não encontrada na base de dados destino.".formatted(table.name(), column.name()));
@@ -66,7 +66,7 @@ public class ConsistencyValidationService {
             }
 
             try {
-                var targetTable = targetTableMap.get(table.name());
+                var targetTable = targetTableMap.get(table.name().toLowerCase());
                 Long originRowCount = originTemplate.queryForObject("SELECT COUNT(*) FROM " + table.name(), Long.class);
                 Long targetRowCount = targetTemplate.queryForObject("SELECT COUNT(*) FROM " + targetTable.name(), Long.class);
 
@@ -82,13 +82,13 @@ public class ConsistencyValidationService {
     }
 
 
-    public ConsistencyValidationDataDTO validate(DbConnectionConfigDTO originConfig, DbConnectionConfigDTO targetConfig) {
+    public ConsistencyValidationDataDTO validate(String identifier, DbConnectionConfigDTO originConfig, DbConnectionConfigDTO targetConfig) {
         try (
                 Connection originConnection = DatabaseConnectionService.createConnection(originConfig);
                 Connection targetConnection = DatabaseConnectionService.createConnection(targetConfig)
         ) {
-            var originMetadata = extractionService.parseMetadata(originConfig.name(), originConnection);
-            var targetMetadata = extractionService.parseMetadata(targetConfig.name(), targetConnection);
+            var originMetadata = extractionService.parseMetadata(identifier, originConnection);
+            var targetMetadata = extractionService.parseMetadata(identifier, targetConnection);
 
             var structuralValidationMessages = compareStructure(originMetadata, targetMetadata);
             var volumetricValidationMessages = compareRowCounts(

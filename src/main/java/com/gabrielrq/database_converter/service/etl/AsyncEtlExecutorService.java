@@ -46,7 +46,7 @@ public class AsyncEtlExecutorService {
 
         try {
             sseService.sendMigrationStatusUpdate(status);
-            DatabaseDefinition metadata = extractionService.extract(status.getMetadata().getOriginConfig());
+            DatabaseDefinition metadata = extractionService.extract(status.getName(), status.getMetadata().getOriginConfig());
             status.getMetadata().setDatabaseMetadata(metadata);
             status.setStep(EtlStep.EXTRACTION_FINISHED);
             statusRepository.save(status);
@@ -112,7 +112,7 @@ public class AsyncEtlExecutorService {
         try {
             sseService.sendMigrationStatusUpdate(status);
             ConsistencyValidationDataDTO validationData = consistencyValidationService.validate(
-                    status.getMetadata().getOriginConfig(), status.getMetadata().getTargetConfig()
+                    status.getName(), status.getMetadata().getOriginConfig(), status.getMetadata().getTargetConfig()
             );
             status.setMessage(String.join(System.lineSeparator(), validationData.messages()));
             status.setStep(EtlStep.FINISHED);
