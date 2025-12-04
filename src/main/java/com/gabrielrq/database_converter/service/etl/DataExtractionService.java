@@ -67,7 +67,7 @@ public class DataExtractionService {
                             ) {
                                 stmt.setFetchSize(fetchSize);
                                 ResultSet rs = stmt.executeQuery(sql);
-                                jsonService.writeStream(rs, outputPath.resolve("tables/" + table.name()).toString());
+                                jsonService.writeStream(rs, outputPath.resolve("tables/" + table.name()).toString(), table);
                             } catch (SQLException e) {
                                 failedTables.put(table.name(), e);
                             } finally {
@@ -193,9 +193,9 @@ public class DataExtractionService {
         );
     }
 
-    public DatabaseDefinition extract(DbConnectionConfigDTO config) {
+    public DatabaseDefinition extract(String identifier, DbConnectionConfigDTO config) {
         try (Connection connection = DatabaseConnectionService.createConnection(config)) {
-            var metadata = parseMetadata(config.name(), connection);
+            var metadata = parseMetadata(identifier, connection);
             storeToJSON(config, metadata);
             return metadata;
         } catch (SQLException e) {

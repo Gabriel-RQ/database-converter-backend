@@ -6,7 +6,10 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.gabrielrq.database_converter.domain.TableDefinition;
 import com.gabrielrq.database_converter.exception.JsonException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -15,12 +18,15 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.*;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class JsonService {
 
+    private static final Logger log = LoggerFactory.getLogger(JsonService.class);
     @Value("${migration.data.path}")
     private String basePath;
     @Value("${migration.transform.maps.path}")
@@ -30,6 +36,7 @@ public class JsonService {
 
     public JsonService() {
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
+        mapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
     }
 
     public void write(Object object, String filename) {
@@ -46,7 +53,7 @@ public class JsonService {
         }
     }
 
-    public void writeStream(ResultSet rs, String filename) {
+    public void writeStream(ResultSet rs, String filename, TableDefinition table) {
         Path outputDir = Path.of(basePath);
         Path outputFile = outputDir.resolve(filename + ".json");
 
@@ -97,10 +104,24 @@ public class JsonService {
                             case Types.BLOB, Types.BINARY, Types.VARBINARY, Types.LONGVARBINARY -> {
                                 byte[] bytes = rs.getBytes(i);
                                 if (bytes != null) {
-                                    generator.writeBinaryField(columnName, bytes); // escreve como base64
+                                    generator.writeBinaryField(columnName, bytes); // writes as base64
                                 } else {
                                     generator.writeNullField(columnName);
                                 }
+                            }
+                            case Types.ARRAY -> {
+                                try {
+                                    Object[] arr = (Object[]) ((Array) value).getArray();
+                                    String arrStr = Arrays.stream(arr).map(v -> v != null ? v.toString() : "").collect(Collectors.joining(";"));
+                                    generator.writeStringField(columnName, arrStr);
+                                } catch (SQLException ignored) {
+                                    /* Arrays are poorly supported in some DBMS, so: try to convert it to a comma separated text, on fail ignore */
+                                    table.columns().remove(columnName);
+                                }
+                            }
+                            case Types.OTHER, Types.DISTINCT -> {
+                                /* Ignore database specific types */
+                                table.columns().remove(columnName);
                             }
                             default -> {
                                 if (value == null) {
