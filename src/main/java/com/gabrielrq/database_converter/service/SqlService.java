@@ -138,7 +138,11 @@ public class SqlService {
 
         for (var table : metadata.tables()) {
             StringBuilder dmlBuilder = new StringBuilder();
-            String columns = String.join(",", table.columns().stream().map(ColumnDefinition::name).toList());
+            String columns = String.join(",",
+                    table.columns().stream()
+                            .filter(c -> !"INVALID".equalsIgnoreCase(c.targetType()))
+                            .map(ColumnDefinition::name).toList()
+            );
 
             if (!generateDMLData(table, tablesPath, dmlBuilder, columns, target)) {
                 continue;
@@ -179,6 +183,16 @@ public class SqlService {
             if (tableData.isEmpty()) return false;
 
             for (var data : tableData) {
+                String values = data.entrySet().stream()
+                        .filter(
+                                e -> table.columns().stream()
+                                        .anyMatch(
+                                                c -> c.name().equalsIgnoreCase(e.getKey()) && !"INVALID".equalsIgnoreCase(c.targetType())
+                                        )
+                        )
+                        .map(e -> formatDMLValue(e.getValue(), target))
+                        .collect(Collectors.joining(","));
+
                 dmlBuilder.append("INSERT INTO ")
 //                        .append(table.schema())
 //                        .append(".")
@@ -187,7 +201,7 @@ public class SqlService {
                         .append(columns)
                         .append(") VALUES ")
                         .append("(")
-                        .append(data.values().stream().map((d) -> formatDMLValue(d, target)).collect(Collectors.joining(",")))
+                        .append(values)
                         .append(");")
                         .append(System.lineSeparator());
             }
@@ -210,10 +224,16 @@ public class SqlService {
                     .replaceAll("[\\u0000-\\u001F\\u007F]", ""); // Remove caracteres de controle
 
             if ("FIREBIRD".equals(target)) {
-                if (stringValue.matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z")) {
-                    stringValue = stringValue.replace("T", " ").replace("Z", "");
-                } else if (stringValue.matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}[+-]\\d{2}:\\d{2}")) {
-                    stringValue = stringValue.substring(0, 19).replace("T", " ");
+                if (stringValue.matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z")) {
+                    stringValue = stringValue
+                            .replace("T", " ")
+                            .replace("Z", "").replaceAll("(\\.\\d{3})\\d{3}$", "$1");
+                    ;
+                } else if (stringValue.matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}[+-]\\d{2}:\\d{2}(\\.\\d+)?")) {
+                    stringValue = stringValue.substring(0, 19)
+                            .replace("T", " ")
+                            .replaceAll("(\\.\\d{3})\\d{3}$", "$1");
+                    ;
                 }
 
                 if (stringValue.length() > 60_000) {
@@ -298,7 +318,8 @@ public class SqlService {
 
     private void generateDDLColumn(TableDefinition table, StringBuilder ddlBuilder, Map<Integer, String> conversionMap, String target) {
         List<String> columnDefinitions = new ArrayList<>();
-        for (var column : table.columns()) {
+        var validColumns = table.columns().stream().filter(c -> !"INVALID".equalsIgnoreCase(c.targetType())).toList();
+        for (var column : validColumns) {
             StringBuilder columnDef = new StringBuilder();
             columnDef
                     .append(column.name())
