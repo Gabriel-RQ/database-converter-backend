@@ -8,6 +8,8 @@ import com.gabrielrq.database_converter.enums.EtlStep;
 import com.gabrielrq.database_converter.repository.EtlStatusRepository;
 import com.gabrielrq.database_converter.service.ConsistencyValidationService;
 import com.gabrielrq.database_converter.service.SseService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +17,8 @@ import java.time.LocalDateTime;
 
 @Service
 public class AsyncEtlExecutorService {
+    private static final Logger logger = LoggerFactory.getLogger(AsyncEtlExecutorService.class);
+
     private final DataExtractionService extractionService;
     private final DataTransformationService transformationService;
     private final DataLoadingService loadingService;
@@ -38,7 +42,7 @@ public class AsyncEtlExecutorService {
         this.sseService = sseService;
     }
 
-    @Async
+    @Async("asyncEtlExecutor")
     public void startExtraction(MigrationStatus status) {
         sseService.sendMigrationStatusUpdate(status);
         status.setStep(EtlStep.EXTRACTION_IN_PROGRESS);
@@ -50,7 +54,9 @@ public class AsyncEtlExecutorService {
             status.getMetadata().setDatabaseMetadata(metadata);
             status.setStep(EtlStep.EXTRACTION_FINISHED);
             statusRepository.save(status);
+            logger.info("Extração finalizada");
         } catch (Exception e) {
+            logger.error("Erro durante extração", e);
             status.setStep(EtlStep.ERROR);
             status.setMessage(e.getMessage());
             statusRepository.save(status);
@@ -59,7 +65,7 @@ public class AsyncEtlExecutorService {
         }
     }
 
-    @Async
+    @Async("asyncEtlExecutor")
     public void startTransformation(MigrationStatus status) {
         status.setStep(EtlStep.TRANSFORMATION_IN_PROGRESS);
         statusRepository.save(status);
@@ -77,7 +83,9 @@ public class AsyncEtlExecutorService {
             statusRepository.save(status);
             status.setStep(EtlStep.WAITING_FOR_LOAD_CONFIRMATION);
             statusRepository.save(status);
+            logger.info("Transformação finalizada");
         } catch (Exception e) {
+            logger.error("Erro durante transformação", e);
             status.setStep(EtlStep.ERROR);
             status.setMessage(e.getMessage());
             statusRepository.save(status);
@@ -86,7 +94,7 @@ public class AsyncEtlExecutorService {
         }
     }
 
-    @Async
+    @Async("asyncEtlExecutor")
     public void startLoading(MigrationStatus status) {
         status.setStep(EtlStep.LOAD_IN_PROGRESS);
         statusRepository.save(status);
@@ -100,7 +108,9 @@ public class AsyncEtlExecutorService {
             );
             status.setStep(EtlStep.LOAD_FINISHED);
             statusRepository.save(status);
+            logger.info("Carga finalizada");
         } catch (Exception e) {
+            logger.error("Erro durante carga", e);
             status.setStep(EtlStep.ERROR);
             status.setMessage(e.getMessage());
             statusRepository.save(status);
@@ -109,7 +119,7 @@ public class AsyncEtlExecutorService {
         }
     }
 
-    @Async
+    @Async("asyncEtlExecutor")
     public void startConsistencyValidation(MigrationStatus status) {
         status.setStep(EtlStep.VALIDATION_IN_PROGRESS);
         statusRepository.save(status);
@@ -123,7 +133,9 @@ public class AsyncEtlExecutorService {
             status.setStep(EtlStep.FINISHED);
             status.setFinishedAt(LocalDateTime.now());
             statusRepository.save(status);
+            logger.info("Validação de consistência finalizada. Detalhes: {}", status.getMessage());
         } catch (Exception e) {
+            logger.error("Erro durante validação de consistência", e);
             status.setStep(EtlStep.ERROR);
             status.setMessage(e.getMessage());
             statusRepository.save(status);
