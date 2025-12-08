@@ -46,7 +46,7 @@ public class AsyncEtlExecutorService {
 
         try {
             sseService.sendMigrationStatusUpdate(status);
-            DatabaseDefinition metadata = extractionService.extract(status.getName(), status.getMetadata().getOriginConfig());
+            DatabaseDefinition metadata = extractionService.extract(status.getId().toString(), status.getMetadata().getOriginConfig());
             status.getMetadata().setDatabaseMetadata(metadata);
             status.setStep(EtlStep.EXTRACTION_FINISHED);
             statusRepository.save(status);
@@ -66,7 +66,11 @@ public class AsyncEtlExecutorService {
 
         try {
             sseService.sendMigrationStatusUpdate(status);
-            TransformationResult result = transformationService.transform(status.getMetadata().getDatabaseMetadata(), status.getMetadata().getTarget());
+            TransformationResult result = transformationService.transform(
+                    status.getId().toString(),
+                    status.getMetadata().getDatabaseMetadata(),
+                    status.getMetadata().getTarget()
+            );
             status.getMetadata().setDatabaseMetadata(result.metadata());
             status.getMetadata().setExecutionOrder(result.executionList());
             status.setStep(EtlStep.TRANSFORMATION_FINISHED);
@@ -90,6 +94,7 @@ public class AsyncEtlExecutorService {
         try {
             sseService.sendMigrationStatusUpdate(status);
             loadingService.load(
+                    status.getId().toString(),
                     status.getMetadata().getTargetConfig(),
                     new TransformationResult(status.getMetadata().getDatabaseMetadata(), status.getMetadata().getExecutionOrder())
             );
@@ -112,7 +117,7 @@ public class AsyncEtlExecutorService {
         try {
             sseService.sendMigrationStatusUpdate(status);
             ConsistencyValidationDataDTO validationData = consistencyValidationService.validate(
-                    status.getName(), status.getMetadata().getOriginConfig(), status.getMetadata().getTargetConfig()
+                    status.getId().toString(), status.getMetadata().getOriginConfig(), status.getMetadata().getTargetConfig()
             );
             status.setMessage(String.join(System.lineSeparator(), validationData.messages()));
             status.setStep(EtlStep.FINISHED);

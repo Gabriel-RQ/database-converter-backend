@@ -46,13 +46,13 @@ public class DataTransformationService {
         return databaseBuilder.build();
     }
 
-    public TransformationResult transform(DatabaseDefinition metadata, String target) {
+    public TransformationResult transform(String identifier, DatabaseDefinition metadata, String target) {
         try {
             Map<Integer, String> targetConversioMap = jsonService.readConversionMap(target);
             var targetMetadata = mapTargetTypes(metadata, targetConversioMap);
-            Path outputPath = Path.of(metadata.name());
+            Path outputPath = Path.of(identifier);
             jsonService.write(targetMetadata, outputPath.resolve("target.meta").toString());
-            sqlService.generate(targetMetadata, targetConversioMap, target);
+            sqlService.generate(identifier, targetMetadata, targetConversioMap, target);
 
             List<TableDefinition> orderedTables = TableDependencyResolver.sortTablesByDependency(targetMetadata.tables());
             jsonService.write(orderedTables.stream().map(TableDefinition::name).toList(), outputPath.resolve("target.load_order").toString());

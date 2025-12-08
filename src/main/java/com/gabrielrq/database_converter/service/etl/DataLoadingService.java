@@ -26,8 +26,8 @@ public class DataLoadingService {
         this.sqlService = sqlService;
     }
 
-    public void load(DbConnectionConfigDTO config, TransformationResult transformationOutput) {
-        Path basePath = Path.of(transformationOutput.metadata().name());
+    public void load(String identifier, DbConnectionConfigDTO config, TransformationResult transformationOutput) {
+        Path basePath = Path.of(identifier);
         JdbcTemplate template = DatabaseConnectionService.createJdbcTemplate(config);
         executeDDL(transformationOutput.executionList(), basePath, template);
         executeDML(transformationOutput.executionList(), basePath, config);

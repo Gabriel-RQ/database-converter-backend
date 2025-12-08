@@ -127,14 +127,14 @@ public class SqlService {
         }
     }
 
-    public void generate(DatabaseDefinition metadata, Map<Integer, String> conversionMap, String target) {
-        generateDDL(metadata, conversionMap, target);
-        generateDML(metadata, target);
+    public void generate(String identifier, DatabaseDefinition metadata, Map<Integer, String> conversionMap, String target) {
+        generateDDL(identifier, metadata, conversionMap, target);
+        generateDML(identifier, metadata, target);
     }
 
-    public void generateDML(DatabaseDefinition metadata, String target) {
-        Path outDir = Path.of(basePath).resolve(metadata.name()).resolve(dmlPath);
-        Path tablesPath = Path.of(basePath).resolve(metadata.name()).resolve("tables");
+    public void generateDML(String identifier, DatabaseDefinition metadata, String target) {
+        Path outDir = Path.of(basePath).resolve(identifier).resolve(dmlPath);
+        Path tablesPath = Path.of(basePath).resolve(identifier).resolve("tables");
 
         for (var table : metadata.tables()) {
             StringBuilder dmlBuilder = new StringBuilder();
@@ -152,10 +152,8 @@ public class SqlService {
         }
     }
 
-    public void generateDDL(DatabaseDefinition metadata, Map<Integer, String> conversionMap, String target) {
-        // TODO melhorar definição das colunas (quanto aos tipos)
-
-        Path outDir = Path.of(basePath).resolve(metadata.name()).resolve(ddlPath);
+    public void generateDDL(String identifier, DatabaseDefinition metadata, Map<Integer, String> conversionMap, String target) {
+        Path outDir = Path.of(basePath).resolve(identifier).resolve(ddlPath);
 
         for (var table : metadata.tables()) {
             StringBuilder ddlBuilder = new StringBuilder()

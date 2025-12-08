@@ -34,8 +34,8 @@ public class DataExtractionService {
         this.jsonService = jsonService;
     }
 
-    private void storeToJSON(DbConnectionConfigDTO config, DatabaseDefinition metadata) {
-        Path outputPath = Path.of(metadata.name());
+    private void storeToJSON(String identifier, DbConnectionConfigDTO config, DatabaseDefinition metadata) {
+        Path outputPath = Path.of(identifier);
         jsonService.write(metadata, outputPath.resolve("origin.meta").toString());
 
         int availableProcessors = Runtime.getRuntime().availableProcessors();
@@ -195,8 +195,8 @@ public class DataExtractionService {
 
     public DatabaseDefinition extract(String identifier, DbConnectionConfigDTO config) {
         try (Connection connection = DatabaseConnectionService.createConnection(config)) {
-            var metadata = parseMetadata(identifier, connection);
-            storeToJSON(config, metadata);
+            var metadata = parseMetadata(config.name(), connection);
+            storeToJSON(identifier, config, metadata);
             return metadata;
         } catch (SQLException e) {
             throw new ExtractionException("Falha na extração de dados. Detalhe: " + e.getMessage());
