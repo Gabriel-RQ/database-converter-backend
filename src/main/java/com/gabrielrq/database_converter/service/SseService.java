@@ -42,8 +42,7 @@ public class SseService {
     private void sendRegistrationConfirmation(SseEmitter emitter) {
         try {
             emitter.send("Emissor de SSE registrado");
-        } catch (IOException ignored) {
-        }
+        } catch (IOException ignored) {}
     }
 
     public void sendMigrationStatusUpdate(MigrationStatus status) {
@@ -55,13 +54,14 @@ public class SseService {
                 emitter.completeWithError(e);
                 sseEmitterRepository.delete(status.getId());
             }
-        } catch (NonExistingSseEmitterException ignored) {
-        }
+        } catch (NonExistingSseEmitterException ignored) {}
     }
 
     public void completeSseEmitter(UUID id) {
-        SseEmitter emitter = sseEmitterRepository.find(id);
-        emitter.complete();
+        try {
+            SseEmitter emitter = sseEmitterRepository.find(id);
+            emitter.complete();
+        } catch (Exception ignored) {}
     }
 
     @EventListener(ContextClosedEvent.class)
