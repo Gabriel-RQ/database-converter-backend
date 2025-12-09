@@ -30,8 +30,14 @@ public class SseService {
         SseEmitter emitter = new SseEmitter(sseTimeout);
 
         emitter.onCompletion(() -> sseEmitterRepository.delete(id));
-        emitter.onTimeout(() -> sseEmitterRepository.delete(id));
-        emitter.onError((e) -> sseEmitterRepository.delete(id));
+        emitter.onTimeout(() -> {
+            emitter.complete();
+            sseEmitterRepository.delete(id);
+        });
+        emitter.onError((e) -> {
+            emitter.complete();
+            sseEmitterRepository.delete(id);
+        });
 
         sendRegistrationConfirmation(emitter);
 
