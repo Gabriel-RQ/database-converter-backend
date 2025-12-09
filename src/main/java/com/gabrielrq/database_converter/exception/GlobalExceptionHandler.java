@@ -12,13 +12,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({RuntimeException.class})
     public ResponseEntity<ErrorResponseDTO> handleRuntimeException(RuntimeException ex, HttpServletRequest request) {
-        ErrorResponseDTO error = new ErrorResponseDTO(HttpStatus.UNPROCESSABLE_ENTITY.value(), ex.getMessage(), request.getRequestURI());
+        ErrorResponseDTO error = new ErrorResponseDTO(HttpStatus.INTERNAL_SERVER_ERROR.value(), ex.getMessage(), request.getRequestURI());
         return ResponseEntity.internalServerError().body(error);
     }
 
     @ExceptionHandler({NonExistentMigrationException.class})
     public ResponseEntity<ErrorResponseDTO> handleNonExistentMigrationException(NonExistentMigrationException ex, HttpServletRequest request) {
-        ErrorResponseDTO error = new ErrorResponseDTO(HttpStatus.UNPROCESSABLE_ENTITY.value(), ex.getMessage(), request.getRequestURI());
+        ErrorResponseDTO error = new ErrorResponseDTO(HttpStatus.BAD_REQUEST.value(), ex.getMessage(), request.getRequestURI());
         return ResponseEntity.badRequest().body(error);
     }
 
