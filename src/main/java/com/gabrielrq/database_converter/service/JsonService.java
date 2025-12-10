@@ -156,9 +156,9 @@ public class JsonService {
     }
 
     public Map<Integer, String> readConversionMap(String mapName) throws IOException {
-        Path mapPath = Path.of(conversionMapsPath).resolve(mapName + ".json");
+        String mapPath = conversionMapsPath + mapName + ".json";
 
-        try (InputStream stream = JsonService.class.getClassLoader().getResourceAsStream(mapPath.toString())) {
+        try (InputStream stream = JsonService.class.getClassLoader().getResourceAsStream(mapPath)) {
             return mapper.readValue(stream, new TypeReference<Map<Integer, String>>() {
             });
         }
