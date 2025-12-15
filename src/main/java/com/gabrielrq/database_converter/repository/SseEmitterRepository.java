@@ -11,28 +11,29 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Repository
 public class SseEmitterRepository {
-    Map<UUID, SseEmitter> repo = new ConcurrentHashMap<>();
+    private final Map<UUID, SseEmitter> repo = new ConcurrentHashMap<>();
 
-    public synchronized void save(UUID id, SseEmitter emitter) {
+    public void save(UUID id, SseEmitter emitter) {
         repo.put(id, emitter);
     }
 
-    public synchronized void delete(UUID id) {
+    public void delete(UUID id) {
         repo.remove(id);
     }
 
     public SseEmitter find(UUID id) {
-        if (!repo.containsKey(id)) {
+        SseEmitter emitter = repo.get(id);
+        if (emitter == null) {
             throw new NonExistingSseEmitterException("Nenhum emissor de SSE vinculado ao ID '" + id + "' encontrado. Experimente abrir uma conexão SSE para essa migração.");
         }
-        return repo.get(id);
+        return emitter;
     }
 
     public List<SseEmitter> findAll() {
         return repo.values().stream().toList();
     }
 
-    public synchronized void clear() {
+    public void clear() {
         repo.clear();
     }
 }

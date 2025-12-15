@@ -81,6 +81,7 @@ public class DataExtractionService {
             boolean isTerminated = executor.awaitTermination(30, TimeUnit.MINUTES);
 
             if (!isTerminated) {
+                executor.shutdownNow();
                 throw new ExtractionException("Falha na finalização das threads: o executor não finalizou corretamente.");
             }
 

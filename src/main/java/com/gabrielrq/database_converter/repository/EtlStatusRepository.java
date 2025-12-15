@@ -13,17 +13,20 @@ import java.util.concurrent.ConcurrentHashMap;
 @Repository
 public class EtlStatusRepository {
 
-    Map<UUID, MigrationStatus> repo = new ConcurrentHashMap<>();
+    private final Map<UUID, MigrationStatus> repo = new ConcurrentHashMap<>();
 
-    public synchronized void save(MigrationStatus status) {
+    public void save(MigrationStatus status) {
         status.setLastUpdated(LocalDateTime.now());
         repo.put(status.getId(), status);
     }
 
     public MigrationStatus find(UUID id) {
-        if (!repo.containsKey(id)) {
-            throw new NonExistentMigrationException("Migração com ID '" + id + "' não encontrada.");
+        MigrationStatus status = repo.get(id);
+        if (status == null) {
+            throw new NonExistentMigrationException(
+                    "Migração com ID '" + id + "' não encontrada."
+            );
         }
-        return repo.get(id);
+        return status;
     }
 }
