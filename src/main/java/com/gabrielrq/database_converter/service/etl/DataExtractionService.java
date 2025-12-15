@@ -23,8 +23,6 @@ public class DataExtractionService {
 
     @Value("${migration.extract.threads:0}")
     private int threadPoolSize;
-    @Value("${migration.extract.threadBatchSize:0}")
-    private int threadBatchSize;
     @Value("${migration.extract.fetchSize:0}")
     private int fetchSize;
 
@@ -40,16 +38,12 @@ public class DataExtractionService {
 
         int availableProcessors = Runtime.getRuntime().availableProcessors();
         int poolSize = threadPoolSize > 0 ? threadPoolSize : Math.max(1, availableProcessors * 2);
-        int batchSize = Math.min(threadBatchSize > 0 ? threadBatchSize : Math.max(1, Math.round(poolSize / 2.0f)), poolSize);
 
         try (ExecutorService executor = Executors.newFixedThreadPool(poolSize)) {
-            Semaphore semaphore = new Semaphore(batchSize);
             List<Future<?>> futures = new ArrayList<>();
             Map<String, Throwable> failedTables = new ConcurrentHashMap<>();
 
             for (final TableDefinition table : metadata.tables()) {
-                semaphore.acquire();
-
                 futures.add(
                         executor.submit(() -> {
 //                            String schema = table.schema();
@@ -70,8 +64,6 @@ public class DataExtractionService {
                                 jsonService.writeStream(rs, outputPath.resolve("tables/" + table.name()).toString(), table);
                             } catch (SQLException e) {
                                 failedTables.put(table.name(), e);
-                            } finally {
-                                semaphore.release();
                             }
                         })
                 );

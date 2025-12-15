@@ -8,7 +8,6 @@ migration:
     path: ./migration/data/
   extract:
     threads: 12
-    threadBatchSize: 4
     fetchSize: 500
   transform:
     maps:
