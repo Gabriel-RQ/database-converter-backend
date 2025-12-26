@@ -1,4 +1,13 @@
 package com.gabrielrq.database_converter.dto;
 
-public record ErrorResponseDTO(int status, String message, String path) {
+import io.swagger.v3.oas.annotations.media.Schema;
+
+public record ErrorResponseDTO(
+        @Schema(description = "Código de status HTTP")
+        int status,
+        @Schema(description = "Mensagem descritiva do erro")
+        String message,
+        @Schema(description = "Caminho da rota em que o erro ocorreu")
+        String path
+) {
 }
