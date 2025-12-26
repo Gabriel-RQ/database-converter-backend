@@ -6,6 +6,8 @@ import com.gabrielrq.database_converter.dto.SqlDTO;
 import com.gabrielrq.database_converter.dto.SqlPageDTO;
 import com.gabrielrq.database_converter.dto.StartMigrationRequestDTO;
 import com.gabrielrq.database_converter.enums.EtlStep;
+import com.gabrielrq.database_converter.exception.InvalidMigrationStateException;
+import com.gabrielrq.database_converter.exception.NonExistentMigrationException;
 import com.gabrielrq.database_converter.service.SqlService;
 import com.gabrielrq.database_converter.service.SseService;
 import com.gabrielrq.database_converter.service.etl.EtlService;
@@ -22,8 +24,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -203,5 +204,37 @@ public class MigrationControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(sqlService).updateDDL(eq(migrationName), anyList());
+    }
+
+    @Test
+    @DisplayName("POST /{id}/extract - Deve retornar 400 Bad Request se a migração não existir")
+    void shouldReturnBadRequestWhenMigrationNotFound() throws Exception {
+        // Arrange
+        UUID id = UUID.randomUUID();
+
+        doThrow(new NonExistentMigrationException("Migração não encontrada"))
+                .when(etlService).startExtraction(id);
+
+        // Act & Assert
+        mockMvc.perform(post("/api/v1/migrations/{id}/extract", id))
+                .andExpect(status().isBadRequest()) // 400
+                .andExpect(jsonPath("$.message").value("Migração não encontrada"))
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    @DisplayName("POST /{id}/transform - Deve retornar 422 Unprocessable Entity se o estado for inválido")
+    void shouldReturnUnprocessableEntityWhenInvalidState() throws Exception {
+        // Arrange
+        UUID id = UUID.randomUUID();
+
+        doThrow(new InvalidMigrationStateException("Estado inválido"))
+                .when(etlService).startTransformation(id);
+
+        // Act & Assert
+        mockMvc.perform(post("/api/v1/migrations/{id}/transform", id))
+                .andExpect(status().isUnprocessableEntity()) // 422
+                .andExpect(jsonPath("$.message").value("Estado inválido"))
+                .andExpect(jsonPath("$.status").value(422));
     }
 }
