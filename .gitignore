@@ -6,6 +6,7 @@ target/
 
 ### Application ###
 migration/
+!**/src/main/**/migration/
 
 ### STS ###
 .apt_generated
